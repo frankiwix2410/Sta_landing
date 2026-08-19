@@ -1,0 +1,25 @@
+.git
+.github
+node_modules
+.next
+out
+build
+coverage
+npm-debug.log*
+.env
+.env.*
+.DS_Store
+*.pem
+*.tsbuildinfo
+
+# Material que no forma parte de la app en producción
+screenshots
+uploads
+legacy
+supabase
+.claude
+AGENTS.md
+CLAUDE.md
+README.md
+Dockerfile
+.dockerignore
