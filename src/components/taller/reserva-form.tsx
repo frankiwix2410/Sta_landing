@@ -1,0 +1,314 @@
+"use client";
+
+import { useActionState } from "react";
+import { createReservation, type ReserveState } from "@/app/taller/actions";
+import { Reveal } from "@/components/ui/motion-primitives";
+import { WhatsAppIcon } from "@/components/ui/icons";
+// Desde `types` y no desde `@/lib/reservations`: ese barrel arrastra el cliente
+// de Supabase, que no debe entrar en el bundle del navegador.
+import type { Seats } from "@/lib/reservations/types";
+import { taller, tallerWaLink } from "@/lib/taller";
+
+const initialState: ReserveState = { status: "idle" };
+
+/**
+ * A partir de aquí se muestra el número exacto de plazas en vez de "cupos
+ * limitados". Anunciar "quedan 31" no aprieta a nadie; "quedan 4", sí.
+ */
+const LOW_SEATS = 8;
+
+function waitlistLink() {
+  return tallerWaLink(
+    `Hola, quiero entrar en la lista de espera del Taller de ${taller.title} ${taller.titleAccent}.`,
+  );
+}
+
+const inputClass =
+  "w-full rounded-xl border border-navy/15 bg-white px-4 py-3.5 text-sm text-navy outline-none transition-colors duration-200 placeholder:text-ink-soft/60 focus:border-azure";
+const labelClass = "mb-2 block text-[12.5px] font-semibold tracking-[0.04em] text-navy";
+
+function Field({
+  id,
+  label,
+  error,
+  children,
+}: {
+  id: string;
+  label: string;
+  error?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className={labelClass}>
+        {label}
+      </label>
+      {children}
+      {error && (
+        <p id={`${id}-error`} className="mt-1.5 text-[12px] text-red-600">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** Panel de cierre: mismo marco que la confirmación, sin formulario debajo. */
+function SoldOutPanel({ message, handoffUrl }: { message: string; handoffUrl: string }) {
+  return (
+    <div className="rounded-3xl bg-cream p-6 text-center sm:p-10">
+      <span className="mx-auto flex size-14 items-center justify-center rounded-full bg-navy/10 text-2xl">
+        ⏳
+      </span>
+      <h3 className="mt-5 text-[26px] text-navy">Cupos agotados</h3>
+      <p className="mt-3 text-[15px] leading-[1.8] text-ink">{message}</p>
+      <p className="mt-2 text-[15px] leading-[1.8] text-ink">
+        Escríbenos y te anotamos en la lista de espera: si se libera una plaza, eres
+        el primero en saberlo.
+      </p>
+      <a
+        href={handoffUrl}
+        target="_blank"
+        rel="noopener"
+        className="mt-7 inline-flex w-full items-center justify-center gap-2.5 rounded-xl bg-navy py-4 text-[14.5px] font-semibold text-white transition-colors duration-300 hover:bg-azure"
+      >
+        <WhatsAppIcon className="size-[18px]" />
+        Entrar en la lista de espera
+      </a>
+    </div>
+  );
+}
+
+export function ReservaForm({ seats }: { seats: Seats | null }) {
+  const [state, formAction, pending] = useActionState(createReservation, initialState);
+
+  const errors = state.status === "error" ? state.errors : {};
+
+  if (state.status === "sold_out") {
+    return <SoldOutPanel message={state.message} handoffUrl={state.handoffUrl} />;
+  }
+
+  // `seats` puede venir de una página cacheada, así que este cierre es solo
+  // cosmético: quien llegue con la página vieja igual recibe el panel de
+  // agotados al enviar, porque el conteo real se hace en la base de datos.
+  if (seats && (!seats.isOpen || seats.remaining <= 0)) {
+    return (
+      <SoldOutPanel
+        message={
+          seats.isOpen
+            ? "Se agotaron las plazas de esta edición."
+            : "Las reservas de esta edición están cerradas por ahora."
+        }
+        handoffUrl={waitlistLink()}
+      />
+    );
+  }
+
+  if (state.status === "ok") {
+    const { result } = state;
+    return (
+      <div className="rounded-3xl bg-cream p-6 text-center sm:p-10">
+        <span className="mx-auto flex size-14 items-center justify-center rounded-full bg-azure/15 text-3xl">
+          ✓
+        </span>
+        <h3 className="mt-5 text-[26px] text-navy">Reserva registrada</h3>
+        <p className="mt-3 text-[15px] leading-[1.8] text-ink">
+          {result.kind === "pending"
+            ? result.message
+            : "Te llevamos a la pasarela para completar el pago."}
+        </p>
+        <p className="mt-5 inline-block rounded-full bg-white px-5 py-2 font-mono text-[13px] tracking-wider text-navy">
+          Referencia: <strong>{result.reference}</strong>
+        </p>
+        <a
+          href={result.kind === "pending" ? result.handoffUrl : result.url}
+          target="_blank"
+          rel="noopener"
+          className="mt-7 inline-flex w-full items-center justify-center gap-2.5 rounded-xl bg-navy py-4 text-[14.5px] font-semibold text-white transition-colors duration-300 hover:bg-azure"
+        >
+          {result.kind === "pending" ? (
+            <>
+              <WhatsAppIcon className="size-[18px]" />
+              Continuar en WhatsApp
+            </>
+          ) : (
+            "Ir a pagar"
+          )}
+        </a>
+        <p className="mt-4 text-[11.5px] text-ink-soft">
+          Guarda tu referencia: la necesitamos para confirmar el cupo.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <form action={formAction} className="flex flex-col gap-4 rounded-3xl bg-cream p-6 sm:p-8">
+      <Field id="name" label="Nombre completo" error={errors.name}>
+        <input
+          id="name"
+          name="name"
+          required
+          type="text"
+          autoComplete="name"
+          maxLength={120}
+          placeholder="Tu nombre y apellido"
+          aria-invalid={Boolean(errors.name)}
+          className={inputClass}
+        />
+      </Field>
+
+      <Field id="email" label="Email" error={errors.email}>
+        <input
+          id="email"
+          name="email"
+          required
+          type="email"
+          autoComplete="email"
+          maxLength={160}
+          placeholder="nombre@correo.com"
+          aria-invalid={Boolean(errors.email)}
+          className={inputClass}
+        />
+      </Field>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Field id="phone" label="WhatsApp" error={errors.phone}>
+          <input
+            id="phone"
+            name="phone"
+            required
+            type="tel"
+            autoComplete="tel"
+            maxLength={40}
+            placeholder="+57 300 000 0000"
+            aria-invalid={Boolean(errors.phone)}
+            className={inputClass}
+          />
+        </Field>
+
+        <Field id="city" label="Ciudad" error={errors.city}>
+          <input
+            id="city"
+            name="city"
+            required
+            type="text"
+            autoComplete="address-level2"
+            maxLength={80}
+            placeholder="Maracaibo"
+            aria-invalid={Boolean(errors.city)}
+            className={inputClass}
+          />
+        </Field>
+      </div>
+
+      <Field id="profession" label="Profesión o especialidad" error={errors.profession}>
+        <input
+          id="profession"
+          name="profession"
+          required
+          type="text"
+          maxLength={120}
+          placeholder="Anestesiólogo · Residente de anestesiología · Médico general"
+          aria-invalid={Boolean(errors.profession)}
+          className={inputClass}
+        />
+      </Field>
+
+      <Field id="notes" label="¿Algo que debamos saber? (opcional)" error={errors.notes}>
+        <textarea
+          id="notes"
+          name="notes"
+          rows={3}
+          maxLength={800}
+          placeholder="Facturación, alimentación, nivel de experiencia con ultrasonido…"
+          className={`${inputClass} resize-y`}
+        />
+      </Field>
+
+      <label className="flex cursor-pointer items-start gap-3 text-[12.5px] leading-relaxed text-ink">
+        <input type="checkbox" name="consent" className="mt-0.5 accent-azure" />
+        <span>
+          Autorizo el tratamiento de mis datos para gestionar la reserva y recibir
+          información del taller.
+        </span>
+      </label>
+      {errors.consent && <p className="-mt-2 text-[12px] text-red-600">{errors.consent}</p>}
+
+      {state.status === "error" && state.message && (
+        <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-[13px] text-red-700">
+          {state.message}
+        </p>
+      )}
+
+      <button
+        type="submit"
+        disabled={pending}
+        className="mt-1 inline-flex cursor-pointer items-center justify-center gap-2.5 rounded-xl bg-navy py-4 text-[14.5px] font-semibold text-white transition-colors duration-300 hover:bg-azure disabled:cursor-wait disabled:opacity-60"
+      >
+        {pending ? "Enviando…" : "Reservar mi cupo"}
+      </button>
+
+      <p className="text-center text-[11.5px] text-ink-soft">
+        {seats && seats.remaining <= LOW_SEATS
+          ? `Quedan ${seats.remaining} ${seats.remaining === 1 ? "cupo" : "cupos"}. `
+          : "Cupos limitados. "}
+        {taller.pricing.published
+          ? "Recibirás tu referencia de pago al enviar."
+          : "Te confirmamos el valor y el medio de pago al contactarte."}
+      </p>
+    </form>
+  );
+}
+
+export function ReservaSection({ seats = null }: { seats?: Seats | null }) {
+  // Con Supabase conectado el dato es real; sin él se cae al texto fijo del
+  // catálogo, que es lo que había antes de tener base de datos.
+  const scarcity =
+    seats && seats.isOpen && seats.remaining > 0 && seats.remaining <= LOW_SEATS
+      ? `Quedan ${seats.remaining} de ${seats.total} cupos`
+      : taller.scarcity;
+
+  return (
+    <section id="reservar" className="bg-white px-5 py-24 sm:px-8 lg:px-16 lg:py-32">
+      <div className="mx-auto grid max-w-[1120px] grid-cols-1 gap-12 lg:grid-cols-[.9fr_1.1fr] lg:gap-16">
+        <div>
+          <Reveal className="eyebrow mb-4 text-azure">
+            <span className="block h-px w-6 bg-azure" />
+            Reserva
+          </Reveal>
+
+          <Reveal>
+            <h2 className="text-[clamp(30px,4vw,48px)] leading-[1.1] text-navy">
+              Asegura tu cupo
+              <span className="block text-azure">antes de que se agote.</span>
+            </h2>
+          </Reveal>
+
+          <Reveal delay={0.12}>
+            <p className="mt-5 max-w-[420px] text-[15px] leading-[1.8] text-ink">
+              {scarcity}. El taller trabaja con grupos reducidos por estación, así
+              que el número de plazas es fijo. Completa el formulario y te confirmamos por
+              WhatsApp.
+            </p>
+          </Reveal>
+
+          <Reveal delay={0.18}>
+            <ul className="mt-8 flex flex-col gap-3">
+              {taller.highlights.map((h) => (
+                <li key={h} className="flex items-start gap-3 text-[14px] text-ink">
+                  <span className="mt-[7px] block size-1.5 flex-none rounded-full bg-azure" />
+                  {h}
+                </li>
+              ))}
+            </ul>
+          </Reveal>
+        </div>
+
+        <Reveal delay={0.15}>
+          <ReservaForm seats={seats} />
+        </Reveal>
+      </div>
+    </section>
+  );
+}

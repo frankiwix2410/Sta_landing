@@ -1,0 +1,45 @@
+/**
+ * Estilos de impresión del certificado.
+ *
+ * Se importan desde `sheet.tsx` y no desde `globals.css` a propósito: la regla
+ * `@page` es global al documento, así que si viviera en los estilos del sitio
+ * pondría toda la landing en A4 apaisado al imprimirla.
+ */
+
+@page {
+  size: A4 landscape;
+  margin: 0;
+}
+
+/* En pantalla la hoja se ve como una hoja sobre una mesa. */
+.cert-sheet {
+  box-shadow: 0 24px 60px -30px rgba(11, 25, 86, 0.45);
+}
+
+@media print {
+  /* Sin esto Chrome descarta la banda navy y los tonos claros del marco. */
+  .cert-sheet {
+    box-shadow: none;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* Una hoja por página; la última no arrastra una página en blanco detrás. */
+  .cert-sheet {
+    break-after: page;
+  }
+
+  .cert-sheet:last-of-type {
+    break-after: auto;
+  }
+
+  /* Botones, avisos y navegación no van al PDF. */
+  .cert-no-print {
+    display: none !important;
+  }
+
+  .cert-page {
+    padding: 0 !important;
+    background: #fff !important;
+  }
+}

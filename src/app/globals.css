@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+@theme {
+  --color-navy: #0b1956;
+  --color-navy-deep: #060f36;
+  --color-azure: #5886e8;
+  --color-sky: #8fb2ff;
+  --color-ice: #d2e8ff;
+  --color-cream: #f7f3ea;
+  --color-sand: #eee7d6;
+  --color-ink: #4b5270;
+  --color-ink-soft: #6a7189;
+
+  --font-sans: var(--font-montserrat), system-ui, sans-serif;
+  /* "serif" es histórico: la clase font-serif ya solo marca acentos de display */
+  --font-serif: var(--font-archivo), system-ui, sans-serif;
+  --font-display: var(--font-anton), var(--font-archivo), system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background: #fff;
+    color: var(--color-navy);
+    font-family: var(--font-sans);
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    /* Anton solo tiene 400; pedir 600 dispararía el bold sintético del navegador */
+    font-weight: 400;
+    letter-spacing: 0.01em;
+  }
+
+  ::selection {
+    background: var(--color-ice);
+    color: var(--color-navy);
+  }
+}
+
+@layer utilities {
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+
+  /* Estados iniciales de las entradas de GSAP.
+     Van en CSS (y no en un `from` de GSAP) para que salgan ya en el HTML del
+     servidor: si se aplicaran al hidratar, el contenido parpadearía visible
+     durante un frame antes de esconderse. GSAP los sobreescribe inline. */
+  .anim-in {
+    opacity: 0;
+    transform: translateY(26px);
+  }
+
+  .anim-rule {
+    transform: scaleX(0);
+  }
+
+  .anim-panel {
+    clip-path: inset(0 0 100% 0);
+  }
+
+  /* Grano sutil: sin él las secciones navy se ven planas en pantallas grandes */
+  .grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.04;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 240 240' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
