@@ -43,8 +43,19 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Trigger Dokploy deployment
+        env:
+          DOKPLOY_URL: ${{ secrets.DOKPLOY_URL }}
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+          DOKPLOY_APP_ID: ${{ secrets.DOKPLOY_APP_ID }}
         run: |
-          curl -fsSL -X POST "${{ secrets.DOKPLOY_URL }}/api/application.deploy" \
-            -H "x-api-key: ${{ secrets.DOKPLOY_API_KEY }}" \
+          # Si un secret se guarda con un salto de línea al final, curl rechaza
+          # la cabecera y sale con el código 43. Ninguno de los tres valores
+          # lleva espacios legítimos, así que se limpian enteros.
+          url=$(printf '%s' "$DOKPLOY_URL" | tr -d '[:space:]' | sed 's:/*$::')
+          key=$(printf '%s' "$DOKPLOY_API_KEY" | tr -d '[:space:]')
+          app=$(printf '%s' "$DOKPLOY_APP_ID" | tr -d '[:space:]')
+
+          curl -sS -L --fail-with-body -X POST "$url/api/application.deploy" \
+            -H "x-api-key: $key" \
             -H "Content-Type: application/json" \
-            -d '{"applicationId":"${{ secrets.DOKPLOY_APP_ID }}"}'
+            -d "{\"applicationId\":\"$app\"}"
