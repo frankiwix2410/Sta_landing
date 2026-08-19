@@ -41,20 +41,23 @@ export function Nav() {
             : "bg-transparent py-4"
         }`}
       >
-        <SmoothLink href="#top" className="flex flex-none items-center gap-3">
+        <SmoothLink href="#top" className="flex flex-none items-center">
           <Image
-            src={onDark ? "/assets/monogram-white.png" : "/assets/monogram-navy.png"}
-            alt="STA"
-            width={1410}
-            height={1182}
+            src={
+              onDark
+                ? "/assets/logo-horizontal-white-trim.png"
+                : "/assets/logo-full-navy-trim.png"
+            }
+            alt="Sedación y Técnicas Analgésicas Avanzadas"
+            width={1100}
+            height={334}
             // `priority` está deprecado desde Next 16; el logo no es el LCP, así
             // que basta con cargarlo sin esperar al viewport.
             loading="eager"
-            className="h-10 w-auto object-contain"
+            className={`w-auto object-contain transition-[height] duration-400 ${
+              scrolled ? "h-9 sm:h-10 lg:h-11" : "h-10 sm:h-12 lg:h-14"
+            }`}
           />
-          <span className={`font-serif text-[15px] leading-none tracking-[0.14em] ${ink}`}>
-            STA
-          </span>
         </SmoothLink>
 
         <div className="hidden items-center gap-6 lg:flex xl:gap-8">

@@ -114,7 +114,7 @@ export function Hero() {
     if (!vid) return;
     if (vid.paused) {
       userPaused.current = false;
-      vid.play().catch(() => {});
+      vid.play().catch(() => { });
     } else {
       userPaused.current = true;
       vid.pause();
