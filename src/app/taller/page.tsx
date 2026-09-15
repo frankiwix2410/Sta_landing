@@ -3,6 +3,7 @@ import { ScrollProgress } from "@/components/scroll-progress";
 import { TallerFooter } from "@/components/taller/footer";
 import { TallerHero } from "@/components/taller/hero";
 import { TallerNav } from "@/components/taller/nav";
+import { PagoSection } from "@/components/taller/pago-form";
 import { ReservaSection } from "@/components/taller/reserva-form";
 import { Contenido, Faq, Instructor } from "@/components/taller/sections";
 import { getSeats } from "@/lib/reservations";
@@ -74,6 +75,7 @@ export default async function TallerPage() {
         <Contenido />
         <Instructor />
         <ReservaSection seats={seats} />
+        <PagoSection />
         <Faq />
       </main>
       <TallerFooter />

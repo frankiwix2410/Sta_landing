@@ -16,11 +16,11 @@ export function Stats() {
           tocar el contraste del texto, que sigue sobre navy casi opaco. */}
       <div aria-hidden className="pointer-events-none absolute inset-0">
         <Image
-          src="/assets/dr-enguantado.webp"
+          src="/assets/dr-guantes-maquina.webp"
           alt=""
           fill
           sizes="100vw"
-          className="object-cover object-[78%_42%] opacity-[0.28]"
+          className="object-cover object-[78%_38%] opacity-[0.28]"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-navy via-navy/80 to-navy/45" />
       </div>

@@ -48,7 +48,7 @@ function Tile({
    `sizes`: a 4 columnas dentro de 1180px, una columna son ~283px y dos ~582px. */
 const PHOTOS = [
   {
-    src: "/assets/dr-guantes.webp",
+    src: "/assets/dr-quirofano-lamparas.webp",
     span: "row-span-2",
     pos: "object-center",
     speed: 26,
@@ -62,16 +62,16 @@ const PHOTOS = [
     sizes: "(max-width:1024px) 100vw, 582px",
   },
   {
-    src: "/assets/dr-jeringa.webp",
+    src: "/assets/dr-jeringa-lampara.webp",
     span: "row-span-2",
-    pos: "object-center",
+    pos: "object-[35%_center]",
     speed: 30,
     sizes: "(max-width:1024px) 50vw, 283px",
   },
   {
-    src: "/assets/dr-circuito.webp",
+    src: "/assets/dr-jeringa-monitor.webp",
     span: "col-span-2 row-span-2",
-    pos: "object-[center_62%]",
+    pos: "object-[center_45%]",
     speed: 18,
     sizes: "(max-width:1024px) 100vw, 582px",
   },

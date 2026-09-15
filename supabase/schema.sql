@@ -266,6 +266,207 @@ grant execute on function public.create_reservation(
 ) to service_role;
 
 -- ---------------------------------------------------------------------------
+-- Comprobantes de pago
+--
+-- Lo que sube quien ya pagó el abono (50%) o el taller completo desde la
+-- sección «Registrar pago». Registrarlo asigna número de reserva, pero NO la
+-- confirma: se revisa el archivo y se pasa a mano la reserva a «confirmed».
+--
+-- Para ver un comprobante: Storage → comprobantes → carpeta de la edición →
+-- el archivo cuyo nombre coincide con `file_path`.
+-- ---------------------------------------------------------------------------
+
+do $$
+begin
+  create type public.payment_kind as enum ('deposit', 'full');
+exception
+  when duplicate_object then null;
+end
+$$;
+
+do $$
+begin
+  create type public.payment_proof_status as enum ('pending', 'verified', 'rejected');
+exception
+  when duplicate_object then null;
+end
+$$;
+
+create table if not exists public.payment_proofs (
+  id          uuid primary key default gen_random_uuid(),
+  edition     text not null references public.taller_editions (slug),
+  -- Referencia STA-XXXXXXXX que la persona escribió. Sin FK a propósito: puede
+  -- no tenerla o equivocarse, y el comprobante igual tiene que quedar guardado.
+  reference   text,
+  -- deposit: abono del 50%. full: pago completo.
+  kind        public.payment_kind not null,
+  name        text not null,
+  email       text not null,
+  phone       text not null,
+  notes       text not null default '',
+  -- Ruta dentro del bucket `comprobantes` (`<edición>/<id>.<ext>`).
+  file_path   text not null unique,
+  file_type   text not null,
+  file_size   integer not null check (file_size > 0),
+  -- pending: sin revisar. verified: pago comprobado. rejected: no es válido.
+  status      public.payment_proof_status not null default 'pending',
+  created_at  timestamptz not null default now()
+);
+
+-- Reserva a la que pertenece el comprobante. Nulo solo en filas anteriores a
+-- esta columna: `register_payment_proof` siempre la rellena.
+alter table public.payment_proofs
+  add column if not exists reservation_id uuid references public.reservations (id);
+
+create index if not exists payment_proofs_edition_created_at_idx
+  on public.payment_proofs (edition, created_at desc);
+
+create index if not exists payment_proofs_reservation_id_idx
+  on public.payment_proofs (reservation_id);
+
+alter table public.payment_proofs enable row level security;
+
+-- ---------------------------------------------------------------------------
+-- Alta de comprobante
+--
+-- Registrar el pago es lo que asigna el número de reserva:
+--   · Con `p_existing_reference`: el comprobante se cuelga de esa reserva y se
+--     devuelve la misma referencia. No se crea otra, así nadie ocupa dos cupos.
+--   · Sin ella: se crea la reserva (reclamando cupo, igual que
+--     `create_reservation`) y se devuelve la referencia nueva.
+--
+-- Reserva y comprobante se insertan en la misma transacción: nunca queda un
+-- número de reserva sin su comprobante ni un comprobante sin reserva. El
+-- archivo ya está en el bucket cuando se llama; si esto devuelve `ok = false`
+-- el servidor lo borra.
+-- ---------------------------------------------------------------------------
+
+create or replace function public.register_payment_proof(
+  p_edition            text,
+  p_proof_id           uuid,
+  p_existing_reference text,
+  p_new_reference      text,
+  p_tier_id            text,
+  p_tier_name          text,
+  p_amount             integer,
+  p_currency           text,
+  p_kind               text,
+  p_name               text,
+  p_email              text,
+  p_phone              text,
+  p_city               text,
+  p_profession         text,
+  p_notes              text,
+  p_file_path          text,
+  p_file_type          text,
+  p_file_size          integer
+)
+returns table (
+  ok                    boolean,
+  reason                text,
+  reservation_reference text
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_total  integer;
+  v_open   boolean;
+  v_taken  integer;
+  v_res_id uuid;
+  v_ref    text;
+begin
+  perform pg_advisory_xact_lock(hashtext(p_edition));
+
+  if p_existing_reference is not null then
+    select r.id, r.reference
+      into v_res_id, v_ref
+      from public.reservations r
+     where r.reference = p_existing_reference
+       and r.edition   = p_edition
+       and r.status   <> 'cancelled';
+
+    if not found then
+      return query select false, 'unknown_reference'::text, null::text;
+      return;
+    end if;
+  else
+    select e.total_seats, e.is_open
+      into v_total, v_open
+      from public.taller_editions e
+     where e.slug = p_edition;
+
+    if not found then
+      return query select false, 'unknown_edition'::text, null::text;
+      return;
+    end if;
+
+    select count(*)::integer
+      into v_taken
+      from public.reservations r
+     where r.edition = p_edition
+       and r.status <> 'cancelled';
+
+    if not v_open then
+      return query select false, 'closed'::text, null::text;
+      return;
+    end if;
+
+    if v_taken >= v_total then
+      return query select false, 'sold_out'::text, null::text;
+      return;
+    end if;
+
+    insert into public.reservations (
+      reference, edition, tier_id, tier_name, amount, currency,
+      name, email, phone, city, profession
+    )
+    values (
+      p_new_reference, p_edition, p_tier_id, p_tier_name, p_amount, p_currency,
+      p_name, p_email, p_phone, p_city, p_profession
+    )
+    returning public.reservations.id, public.reservations.reference
+      into v_res_id, v_ref;
+  end if;
+
+  insert into public.payment_proofs (
+    id, edition, reservation_id, reference, kind,
+    name, email, phone, notes, file_path, file_type, file_size
+  )
+  values (
+    p_proof_id, p_edition, v_res_id, v_ref, p_kind::public.payment_kind,
+    p_name, p_email, p_phone, coalesce(p_notes, ''), p_file_path, p_file_type, p_file_size
+  );
+
+  return query select true, null::text, v_ref;
+end;
+$$;
+
+revoke all on function public.register_payment_proof(
+  text, uuid, text, text, text, text, integer, text, text,
+  text, text, text, text, text, text, text, text, integer
+) from public, anon, authenticated;
+
+grant execute on function public.register_payment_proof(
+  text, uuid, text, text, text, text, integer, text, text,
+  text, text, text, text, text, text, text, text, integer
+) to service_role;
+
+-- Bucket privado: sin políticas en storage.objects, solo service_role lee y
+-- escribe. Los límites repiten los del servidor (`PROOF_MAX_BYTES`) como segunda
+-- barrera.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'comprobantes',
+  'comprobantes',
+  false,
+  5242880,
+  array['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'application/pdf']
+)
+on conflict (id) do nothing;
+
+-- ---------------------------------------------------------------------------
 -- Edición actual — ajusta `total_seats` al cupo real del taller.
 -- ---------------------------------------------------------------------------
 

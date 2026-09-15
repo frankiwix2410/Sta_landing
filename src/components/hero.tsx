@@ -180,7 +180,9 @@ export function Hero() {
           </div>
 
           <div className="anim-in hero-in mt-8 inline-flex items-center gap-3.5 rounded-2xl bg-white/95 px-5 py-3.5 shadow-[0_24px_50px_-24px_rgba(0,0,0,.6)]">
-            <span className="font-serif text-3xl leading-none text-navy">+12</span>
+            <span className="font-serif text-3xl leading-none text-navy">
+              +{site.yearsExperience}
+            </span>
             <span className="max-w-[120px] text-[11.5px] leading-tight text-ink-soft">
               {t.hero.badge}
             </span>

@@ -9,12 +9,14 @@ export function TallerFooter() {
       <div className="relative mx-auto flex max-w-[1120px] flex-wrap items-start justify-between gap-9">
         <div className="max-w-[320px]">
           <Image
-            src="/assets/logo-full-white.png"
+            // Versión recortada: la "full" trae tanto margen transparente que
+            // a esta altura el logo visible quedaba en ~21px.
+            src="/assets/logo-horizontal-white-trim.png"
             alt={site.brandFull}
-            width={1410}
-            height={1182}
-            sizes="200px"
-            className="-ml-1.5 h-[76px] w-auto object-contain object-left"
+            width={1100}
+            height={334}
+            sizes="290px"
+            className="h-[72px] w-auto sm:h-[88px]"
           />
           <p className="mt-3.5 text-[13px] leading-[1.7] text-ice/55">
             Taller de {taller.title} {taller.titleAccent} · {taller.dates.label} ·{" "}
@@ -43,6 +45,12 @@ export function TallerFooter() {
                 className="text-[13.5px] text-white/80 transition-colors hover:text-white"
               >
                 Reservar cupo
+              </a>
+              <a
+                href="#registro-pago"
+                className="text-[13.5px] text-white/80 transition-colors hover:text-white"
+              >
+                Registrar pago
               </a>
               <Link
                 href="/"

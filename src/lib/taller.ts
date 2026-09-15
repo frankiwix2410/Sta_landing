@@ -21,7 +21,7 @@ export const taller = {
   instructor: {
     name: "Stevan J. Camelo Castañeda",
     role: "Anestesiólogo intervencionista",
-    photo: "/assets/dr-quirofano.webp",
+    photo: "/assets/dr-brazos-cruzados.webp",
     credentials: [
       "Anestesiólogo intervencionista",
       "Entrenamiento avanzado en anestesia regional y accesos vasculares ecoguiados",
@@ -104,6 +104,15 @@ export const taller = {
     ],
   },
 
+  /**
+   * Condición del abono. Se muestra junto al registro de pago y en el
+   * formulario, donde hay que aceptarla para registrar un abono.
+   */
+  payment: {
+    policy:
+      "Si no pagas a tiempo el 50% restante, no hay reembolso del abono: ese primer 50% cubre los gastos operativos del taller.",
+  },
+
   faq: [
     {
       q: "¿A quién está dirigido el taller?",
@@ -119,7 +128,11 @@ export const taller = {
     },
     {
       q: "¿Cómo se confirma mi cupo?",
-      a: "Al enviar el formulario generamos tu reserva con un número de referencia y te contactamos por WhatsApp para cerrar el pago. El cupo queda confirmado cuando se registra el pago.",
+      a: "Al enviar el formulario generamos tu reserva con un número de referencia y te contactamos por WhatsApp para cerrar el pago. Cuando pagues —abono del 50% o pago completo— sube tu comprobante en «Registrar pago»: ahí te asignamos tu número de reserva si aún no lo tenías. El cupo queda confirmado cuando verificamos el pago.",
+    },
+    {
+      q: "¿Me devuelven el abono si no completo el pago?",
+      a: "No. Si no pagas a tiempo el 50% restante, no hay reembolso del abono, porque ese 50% cubre los gastos operativos del taller.",
     },
   ],
 } as const;

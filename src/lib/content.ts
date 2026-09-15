@@ -1,3 +1,5 @@
+import { site } from "@/lib/site";
+
 export type Lang = "es" | "en";
 
 export const content = {
@@ -38,13 +40,34 @@ export const content = {
       eyebrow: "Sobre el médico",
       title: ["Ciencia y calidez", "en cada procedimiento"],
       p1: "Dr. Stevan J. Camelo C. es un profesional dedicado al manejo seguro de la sedación y el dolor. Su práctica combina rigor técnico con un trato humano que busca que cada paciente viva su procedimiento con tranquilidad y confianza.",
-      p2: "[Texto placeholder — reemplazar por la biografía real.]",
-      cards: [
-        { t: "Formación", d: "Universidad · Especialidad [placeholder]" },
-        { t: "Certificaciones", d: "Avales y membresías [placeholder]" },
-        { t: "Trayectoria", d: "Años de práctica clínica [placeholder]" },
-        { t: "Enfoque", d: "Seguridad y confort del paciente" },
-      ],
+      experience: "años de experiencia",
+      education: {
+        t: "Formación",
+        items: [
+          { title: "Médico", place: "Universidad de Pamplona" },
+          { title: "Especialista en Anestesiología", place: "Universidad del Zulia" },
+        ],
+      },
+      certifications: {
+        t: "Certificaciones",
+        items: [
+          "Anestesia fuera del quirófano",
+          "Instructor de anestesia regional ecoguiada",
+          "Manejo intervencionista del dolor",
+          "Docencia universitaria",
+          // Espacios duros: la sigla no debe partirse en dos líneas.
+          "Junta directiva SARG – SCARE",
+        ],
+      },
+      focus: {
+        t: "Enfoque",
+        items: [
+          "Sedación fuera de quirófano",
+          "Manejo avanzado del dolor",
+          "Optimización preoperatoria",
+          "Educación médica avanzada",
+        ],
+      },
     },
     services: {
       eyebrow: "Servicios y técnicas",
@@ -52,28 +75,20 @@ export const content = {
       lead: "Cada técnica se elige después de valorar tu historia clínica y el procedimiento que vas a recibir. Nunca al revés.",
       items: [
         {
-          t: "Sedación consciente",
-          d: "Relajación controlada manteniendo la respuesta del paciente, ideal para procedimientos ambulatorios cortos.",
+          t: "Sedación en procedimientos médicos y odontológicos",
+          d: "Sedación consciente o profunda con monitorización continua, para vivir tu procedimiento con tranquilidad y sin dolor.",
         },
         {
-          t: "Sedación profunda",
-          d: "Monitorización avanzada para procedimientos que requieren mayor profundidad, con máxima seguridad.",
+          t: "Optimización preoperatoria",
+          d: "Evaluación integral antes del procedimiento para preparar tu condición clínica y planificar la técnica más segura.",
         },
         {
-          t: "Técnicas analgésicas avanzadas",
-          d: "Estrategias multimodales para el control del dolor, personalizadas a cada procedimiento y paciente.",
+          t: "Manejo avanzado del dolor agudo y crónico",
+          d: "Analgesia multimodal, bloqueos guiados por ecografía y técnicas intervencionistas, personalizadas a cada paciente.",
         },
         {
-          t: "Bloqueos regionales",
-          d: "Analgesia dirigida guiada por ecografía para un alivio preciso y una recuperación más rápida.",
-        },
-        {
-          t: "Manejo del dolor agudo",
-          d: "Protocolos para el control del dolor postoperatorio, priorizando el confort y la pronta recuperación.",
-        },
-        {
-          t: "Valoración preanestésica",
-          d: "Evaluación integral previa para planificar la técnica más segura según tu historia clínica.",
+          t: "Educación médica especializada",
+          d: "Talleres y docencia en anestesia regional ecoguiada y sedación para anestesiólogos, residentes y médicos.",
         },
       ],
     },
@@ -81,8 +96,8 @@ export const content = {
       eyebrow: "Por qué elegirme",
       title: ["Confianza respaldada", "por resultados"],
       items: [
-        { n: 12, suffix: "+", label: "Años de experiencia" },
-        { n: 8000, suffix: "+", label: "Procedimientos realizados" },
+        { n: site.yearsExperience, suffix: "+", label: "Años de experiencia" },
+        { n: 1100, suffix: "+", label: "Procedimientos realizados" },
         { n: 99, suffix: "%", label: "Satisfacción del paciente" },
         { n: 24, suffix: "/7", label: "Acompañamiento y respuesta" },
       ],
@@ -94,10 +109,10 @@ export const content = {
       note: "Quirófano, monitorización avanzada y talleres de bloqueos guiados por ecografía.",
       // El orden coincide con las celdas de <Gallery>.
       photos: [
-        "El Dr. Camelo se enguanta junto a la máquina de anestesia antes de un procedimiento.",
+        "El Dr. Camelo sonríe de brazos cruzados en el quirófano, bajo las lámparas encendidas.",
         "Dos participantes del taller practican una punción guiada por ecografía sobre modelo.",
         "El Dr. Camelo carga la medicación bajo la lámpara del quirófano.",
-        "El Dr. Camelo revisa el circuito y la mascarilla con el monitor de constantes al fondo.",
+        "El Dr. Camelo prepara una jeringa frente a la máquina de anestesia y el monitor de constantes.",
         "Vista superior del taller: la pantalla del ecógrafo y las manos guiando la aguja sobre el modelo.",
         "Un participante dirige la aguja con la sonda del ecógrafo durante el taller.",
       ],
@@ -111,18 +126,36 @@ export const content = {
       viewOnGoogle: "Ver en Google",
       readFull: "Leer completa en Google",
       // Se muestran mientras cargan las de Google, y si no hay o fallan.
+      // Reseñas reales del perfil de Google (5★), con ortografía corregida,
+      // sin emojis y con el apellido abreviado.
       items: [
         {
-          q: "Nunca me sentí tan tranquilo antes de un procedimiento. Todo fue claro, humano y sin dolor.",
-          a: "Paciente [placeholder]",
+          q: "Del doctor tengo mucho agradecimiento: desde el día uno que nos pusimos en contacto fue atento, amable y responsable. Para mí, el mejor anestesiólogo. Muy empático, todo muy positivo. ¡Recomendadísimo!",
+          a: "Angie R.",
         },
         {
-          q: "Profesionalismo absoluto. Me explicó cada paso y me sentí en las mejores manos.",
-          a: "Paciente [placeholder]",
+          q: "¡Excelente servicio! Amé la bomba del dolor. Pude ir a trabajar sin problema. ¡Gracias! Recomendado.",
+          a: "Maritza M.",
         },
         {
-          q: "La sedación fue impecable y la recuperación rapidísima. Lo recomiendo con total confianza.",
-          a: "Paciente [placeholder]",
+          q: "La atención por parte del Dr. Camelo es excelente. Es un doctor que te acompaña en todo tu proceso y está pendiente de tu salud. Si quieres un anestesiólogo con atención humana, te lo recomiendo.",
+          a: "Elis Ana P.",
+        },
+        {
+          q: "Excelente atención y explicación sobre el tratamiento de la bomba del dolor. Muy amable y atento a mis inquietudes.",
+          a: "Alejandra S.",
+        },
+        {
+          q: "¡Excelente servicio! El mejor: amabilidad, humanidad, empatía. 10/10.",
+          a: "María Mónica M.",
+        },
+        {
+          q: "Excelente atención, amabilidad y calidad en el servicio. Gracias por tanto, los súper recomiendo.",
+          a: "Sandra S.",
+        },
+        {
+          q: "El servicio es excelente, te brindan la ayuda que necesitas para tu situación. Gracias por su apoyo, doc.",
+          a: "Ana C.",
         },
       ],
     },
@@ -197,13 +230,33 @@ export const content = {
       eyebrow: "About the doctor",
       title: ["Science and warmth", "in every procedure"],
       p1: "Dr. Stevan J. Camelo C. is a professional devoted to the safe management of sedation and pain. His practice blends technical rigor with a human touch so every patient goes through their procedure calmly and confidently.",
-      p2: "[Placeholder text — replace with the real bio.]",
-      cards: [
-        { t: "Education", d: "University · Specialty [placeholder]" },
-        { t: "Certifications", d: "Endorsements & memberships [placeholder]" },
-        { t: "Track record", d: "Years of clinical practice [placeholder]" },
-        { t: "Approach", d: "Patient safety and comfort" },
-      ],
+      experience: "years of experience",
+      education: {
+        t: "Education",
+        items: [
+          { title: "Physician", place: "Universidad de Pamplona" },
+          { title: "Anesthesiology specialist", place: "Universidad del Zulia" },
+        ],
+      },
+      certifications: {
+        t: "Certifications",
+        items: [
+          "Non-operating room anesthesia",
+          "Ultrasound-guided regional anesthesia instructor",
+          "Interventional pain management",
+          "University teaching",
+          "Board member, SARG – SCARE",
+        ],
+      },
+      focus: {
+        t: "Approach",
+        items: [
+          "Sedation outside the operating room",
+          "Advanced pain management",
+          "Preoperative optimization",
+          "Advanced medical education",
+        ],
+      },
     },
     services: {
       eyebrow: "Services & techniques",
@@ -211,28 +264,20 @@ export const content = {
       lead: "Every technique is chosen after assessing your medical history and the procedure you are about to receive. Never the other way around.",
       items: [
         {
-          t: "Conscious sedation",
-          d: "Controlled relaxation while keeping the patient responsive — ideal for short outpatient procedures.",
+          t: "Sedation for medical and dental procedures",
+          d: "Conscious or deep sedation with continuous monitoring, so you go through your procedure calmly and pain-free.",
         },
         {
-          t: "Deep sedation",
-          d: "Advanced monitoring for procedures that need greater depth, with maximum safety.",
+          t: "Preoperative optimization",
+          d: "A thorough assessment before your procedure to prepare your clinical condition and plan the safest technique.",
         },
         {
-          t: "Advanced analgesic techniques",
-          d: "Multimodal strategies for pain control, tailored to each procedure and patient.",
+          t: "Advanced acute and chronic pain management",
+          d: "Multimodal analgesia, ultrasound-guided blocks and interventional techniques, tailored to each patient.",
         },
         {
-          t: "Regional blocks",
-          d: "Ultrasound-guided targeted analgesia for precise relief and faster recovery.",
-        },
-        {
-          t: "Acute pain management",
-          d: "Protocols for postoperative pain control, prioritizing comfort and swift recovery.",
-        },
-        {
-          t: "Pre-anesthetic assessment",
-          d: "A thorough prior evaluation to plan the safest technique for your medical history.",
+          t: "Specialized medical education",
+          d: "Workshops and teaching in ultrasound-guided regional anesthesia and sedation for anesthesiologists, residents and physicians.",
         },
       ],
     },
@@ -240,8 +285,8 @@ export const content = {
       eyebrow: "Why choose me",
       title: ["Trust backed", "by results"],
       items: [
-        { n: 12, suffix: "+", label: "Years of experience" },
-        { n: 8000, suffix: "+", label: "Procedures performed" },
+        { n: site.yearsExperience, suffix: "+", label: "Years of experience" },
+        { n: 1100, suffix: "+", label: "Procedures performed" },
         { n: 99, suffix: "%", label: "Patient satisfaction" },
         { n: 24, suffix: "/7", label: "Care and response" },
       ],
@@ -253,10 +298,10 @@ export const content = {
       note: "Operating theatre, advanced monitoring and ultrasound-guided block workshops.",
       // The order matches the cells in <Gallery>.
       photos: [
-        "Dr. Camelo gloving up next to the anesthesia machine before a procedure.",
+        "Dr. Camelo smiling with arms crossed in the operating theatre, under the surgical lights.",
         "Two workshop participants practising an ultrasound-guided puncture on a model.",
         "Dr. Camelo drawing up medication under the theatre light.",
-        "Dr. Camelo checking the circuit and mask with the vitals monitor behind him.",
+        "Dr. Camelo preparing a syringe in front of the anesthesia machine and vitals monitor.",
         "Overhead view of the workshop: the ultrasound screen and hands guiding the needle on the model.",
         "A participant guiding the needle with the ultrasound probe during the workshop.",
       ],
@@ -270,18 +315,35 @@ export const content = {
       viewOnGoogle: "View on Google",
       readFull: "Read in full on Google",
       // Shown while the Google ones load, and if there are none or they fail.
+      // Real 5★ Google reviews, translated from Spanish.
       items: [
         {
-          q: "I have never felt so calm before a procedure. Everything was clear, human and pain-free.",
-          a: "Patient [placeholder]",
+          q: "I am deeply grateful to the doctor: from the very first day we got in touch he was attentive, kind and responsible. To me, the best anesthesiologist. Very empathetic, everything was positive. Highly recommended!",
+          a: "Angie R.",
         },
         {
-          q: "Absolute professionalism. He explained every step and I felt in the best hands.",
-          a: "Patient [placeholder]",
+          q: "Excellent service! I loved the pain pump. I was able to go to work with no problem. Thank you! Recommended.",
+          a: "Maritza M.",
         },
         {
-          q: "The sedation was flawless and recovery was incredibly fast. I recommend him with complete confidence.",
-          a: "Patient [placeholder]",
+          q: "The care from Dr. Camelo is excellent. He is a doctor who stays with you throughout your whole process and looks after your health. If you want an anesthesiologist with a human touch, I recommend him.",
+          a: "Elis Ana P.",
+        },
+        {
+          q: "Excellent care and a clear explanation of the pain pump treatment. Very kind and attentive to my concerns.",
+          a: "Alejandra S.",
+        },
+        {
+          q: "Excellent service! The best: kindness, humanity, empathy. 10/10.",
+          a: "María Mónica M.",
+        },
+        {
+          q: "Excellent care, kindness and quality of service. Thank you for everything, I highly recommend them.",
+          a: "Sandra S.",
+        },
+        {
+          q: "The service is excellent, they give you the help you need for your situation. Thank you for your support, doc.",
+          a: "Ana C.",
         },
       ],
     },

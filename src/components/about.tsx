@@ -5,8 +5,12 @@ import { useRef } from "react";
 import { motion, useScroll, useTransform } from "motion/react";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { useLang } from "@/components/providers";
+import { CheckIcon } from "@/components/ui/icons";
 import { Reveal, WordsReveal } from "@/components/ui/motion-primitives";
 import { site } from "@/lib/site";
+
+// Mismo rótulo para los tres grupos de credenciales.
+const groupTitle = "mb-4 text-[13px] tracking-[0.12em] text-navy uppercase";
 
 export function About() {
   const { t } = useLang();
@@ -32,7 +36,7 @@ export function About() {
           <div className="relative aspect-[560/700] overflow-hidden rounded-2xl shadow-[0_30px_70px_-35px_rgba(11,25,86,.55)]">
             <motion.div style={{ y: imgY }} className="relative h-[112%] w-full">
               <Image
-                src="/assets/dr-quirofano.webp"
+                src="/assets/dr-brazos-cruzados.webp"
                 alt={site.doctor}
                 fill
                 sizes="(max-width: 1024px) 90vw, 420px"
@@ -56,24 +60,63 @@ export function About() {
           />
 
           <Reveal delay={0.15}>
-            <p className="mt-6 max-w-[520px] text-[15.5px] leading-[1.85] text-ink">
+            <p className="mt-6 max-w-[540px] text-[15.5px] leading-[1.85] text-ink">
               {t.about.p1}
-            </p>
-            <p className="mt-3 max-w-[520px] text-sm leading-[1.8] text-ink-soft italic">
-              {t.about.p2}
             </p>
           </Reveal>
 
-          <div className="mt-9 grid grid-cols-1 gap-x-5 gap-y-4 sm:grid-cols-2">
-            {t.about.cards.map((c, i) => (
-              <Reveal key={c.t} delay={0.1 + i * 0.08}>
-                <div className="group border-l-2 border-ice py-1 pl-4 transition-colors duration-300 hover:border-azure">
-                  <h4 className="mb-1 text-[15px] text-navy">{c.t}</h4>
-                  <p className="text-[13px] leading-relaxed text-ink-soft">{c.d}</p>
-                </div>
-              </Reveal>
-            ))}
-          </div>
+          {/* Experiencia + formación: la cifra ancla la fila */}
+          <Reveal
+            delay={0.1}
+            className="mt-10 grid grid-cols-1 gap-8 border-t border-navy/10 pt-8 sm:grid-cols-[auto_1fr] sm:gap-12"
+          >
+            <div className="flex items-center gap-4 sm:block">
+              <span className="font-serif text-[56px] leading-none text-navy">
+                +{site.yearsExperience}
+              </span>
+              <p className="max-w-[120px] text-[12px] leading-snug font-semibold tracking-[0.08em] text-ink-soft uppercase sm:mt-3">
+                {t.about.experience}
+              </p>
+            </div>
+
+            <div className="sm:border-l sm:border-navy/10 sm:pl-12">
+              <h3 className={groupTitle}>{t.about.education.t}</h3>
+              <ul className="space-y-3.5">
+                {t.about.education.items.map((e) => (
+                  <li key={e.title}>
+                    <p className="text-[15px] font-medium text-navy">{e.title}</p>
+                    <p className="text-[13.5px] text-ink-soft">{e.place}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </Reveal>
+
+          <Reveal delay={0.1} className="mt-8 border-t border-navy/10 pt-8">
+            <h3 className={groupTitle}>{t.about.certifications.t}</h3>
+            <ul className="flex flex-wrap gap-2">
+              {t.about.certifications.items.map((c) => (
+                <li
+                  key={c}
+                  className="rounded-full border border-navy/10 bg-cream px-3.5 py-1.5 text-[13px] text-navy"
+                >
+                  {c}
+                </li>
+              ))}
+            </ul>
+          </Reveal>
+
+          <Reveal delay={0.1} className="mt-8 border-t border-navy/10 pt-8">
+            <h3 className={groupTitle}>{t.about.focus.t}</h3>
+            <ul className="grid grid-cols-1 gap-x-6 gap-y-2.5 sm:grid-cols-2">
+              {t.about.focus.items.map((f) => (
+                <li key={f} className="flex items-start gap-2.5 text-[14px] text-ink">
+                  <CheckIcon className="mt-0.5 size-4 shrink-0 text-azure" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+          </Reveal>
         </div>
       </div>
     </section>

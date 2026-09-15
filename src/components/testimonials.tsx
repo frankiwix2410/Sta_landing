@@ -167,8 +167,9 @@ export function Testimonials() {
                     )}
                   </footer>
                 ) : (
-                  <footer className="mt-6 text-[13px] font-semibold tracking-[0.04em] text-azure">
-                    — {curated.a}
+                  <footer className="mt-7 flex flex-col items-center gap-2.5">
+                    <Stars value={5} className="text-[15px] text-[#f5a623]" />
+                    <span className="text-[13.5px] font-semibold text-navy">{curated.a}</span>
                   </footer>
                 )}
               </motion.blockquote>
