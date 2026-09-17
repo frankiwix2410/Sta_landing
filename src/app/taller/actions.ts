@@ -13,7 +13,7 @@ export type ReserveState =
   | { status: "sold_out"; message: string; handoffUrl: string }
   | { status: "ok"; result: CheckoutResult };
 
-const MAX = { name: 120, email: 160, phone: 40, city: 80, profession: 120, notes: 800 };
+const MAX = { name: 120, document: 30, email: 160, phone: 40, city: 80, profession: 120, notes: 800 };
 
 function str(formData: FormData, key: string) {
   const v = formData.get(key);
@@ -166,6 +166,15 @@ export async function registerPayment(
   const errors: Record<string, string> = {};
   const { customer, notes } = readCustomer(formData, errors);
 
+  // El documento solo se pide aquí: la reserva sin pago se cierra por WhatsApp,
+  // pero un comprobante hay que poder cruzarlo con quien hizo la transferencia.
+  const document = str(formData, "document").replace(/\s+/g, " ");
+  // Validación laxa a propósito: conviven cédulas, pasaportes y documentos de
+  // otros países, con o sin puntos, guiones o prefijo de nacionalidad.
+  const documentChars = document.replace(/[^\p{L}\p{N}]/gu, "");
+  if (documentChars.length < 5 || document.length > MAX.document)
+    errors.document = "Escribe tu número de documento (cédula o pasaporte).";
+
   const rawKind = str(formData, "kind");
   const kind: PaymentKind | null = rawKind === "deposit" || rawKind === "full" ? rawKind : null;
 
@@ -207,6 +216,7 @@ export async function registerPayment(
         "",
         ...(assigned ? [`Número de reserva: ${assigned}`] : []),
         `Nombre: ${customer.name}`,
+        `Documento: ${document}`,
         `Email: ${customer.email}`,
         `Teléfono: ${customer.phone}`,
       ].join("\n"),
@@ -219,7 +229,7 @@ export async function registerPayment(
     tierId: defaultTier.id,
     tierName: defaultTier.name,
     price: currentPrice(),
-    customer,
+    customer: { ...customer, document },
     notes,
     file,
   });

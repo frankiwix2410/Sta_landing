@@ -35,7 +35,7 @@ create table if not exists public.taller_editions (
   is_open       boolean not null default true,
   -- Título tal cual se imprime en el certificado.
   course_title  text,
-  -- Fechas tal cual se imprimen ("Octubre 23 y 24, 2026").
+  -- Fechas tal cual se imprimen ("Octubre 24 y 25, 2026").
   dates_label   text,
   -- Horas académicas acreditadas. Nulo = el certificado no las menciona.
   hours         integer check (hours is null or hours > 0),
@@ -62,6 +62,9 @@ create table if not exists public.reservations (
   amount      integer,
   currency    text,
   name        text not null,
+  -- Cédula o pasaporte. Nulo en las reservas que se hacen sin pagar: solo se
+  -- pide al registrar un comprobante, que es cuando hay que cruzar quién pagó.
+  document    text,
   email       text not null,
   phone       text not null,
   city        text not null,
@@ -78,6 +81,7 @@ create table if not exists public.reservations (
 );
 
 alter table public.reservations add column if not exists attended boolean not null default false;
+alter table public.reservations add column if not exists document text;
 
 -- Conversión para bases que ya tenían `status` como texto con CHECK. El bloque
 -- no hace nada si la columna ya es del tipo ENUM, así que el archivo se puede
@@ -301,6 +305,10 @@ create table if not exists public.payment_proofs (
   -- deposit: abono del 50%. full: pago completo.
   kind        public.payment_kind not null,
   name        text not null,
+  -- Documento tal cual lo escribió quien subió el comprobante. Se guarda aquí
+  -- además de en la reserva: si el pago se cuelga de una reserva anterior, este
+  -- es el dato de quien hizo la transferencia.
+  document    text,
   email       text not null,
   phone       text not null,
   notes       text not null default '',
@@ -317,6 +325,8 @@ create table if not exists public.payment_proofs (
 -- esta columna: `register_payment_proof` siempre la rellena.
 alter table public.payment_proofs
   add column if not exists reservation_id uuid references public.reservations (id);
+
+alter table public.payment_proofs add column if not exists document text;
 
 create index if not exists payment_proofs_edition_created_at_idx
   on public.payment_proofs (edition, created_at desc);
@@ -341,6 +351,13 @@ alter table public.payment_proofs enable row level security;
 -- el servidor lo borra.
 -- ---------------------------------------------------------------------------
 
+-- Añadir un parámetro crea una sobrecarga en vez de reemplazar la función, así
+-- que la firma anterior (sin `p_document`) se elimina antes.
+drop function if exists public.register_payment_proof(
+  text, uuid, text, text, text, text, integer, text, text,
+  text, text, text, text, text, text, text, text, integer
+);
+
 create or replace function public.register_payment_proof(
   p_edition            text,
   p_proof_id           uuid,
@@ -352,6 +369,7 @@ create or replace function public.register_payment_proof(
   p_currency           text,
   p_kind               text,
   p_name               text,
+  p_document           text,
   p_email              text,
   p_phone              text,
   p_city               text,
@@ -391,6 +409,12 @@ begin
       return query select false, 'unknown_reference'::text, null::text;
       return;
     end if;
+
+    -- La reserva pudo crearse desde el formulario de reserva, que no pide
+    -- documento. `coalesce` evita pisar uno ya guardado con una errata nueva.
+    update public.reservations
+       set document = coalesce(document, p_document)
+     where id = v_res_id;
   else
     select e.total_seats, e.is_open
       into v_total, v_open
@@ -420,11 +444,11 @@ begin
 
     insert into public.reservations (
       reference, edition, tier_id, tier_name, amount, currency,
-      name, email, phone, city, profession
+      name, document, email, phone, city, profession
     )
     values (
       p_new_reference, p_edition, p_tier_id, p_tier_name, p_amount, p_currency,
-      p_name, p_email, p_phone, p_city, p_profession
+      p_name, p_document, p_email, p_phone, p_city, p_profession
     )
     returning public.reservations.id, public.reservations.reference
       into v_res_id, v_ref;
@@ -432,11 +456,12 @@ begin
 
   insert into public.payment_proofs (
     id, edition, reservation_id, reference, kind,
-    name, email, phone, notes, file_path, file_type, file_size
+    name, document, email, phone, notes, file_path, file_type, file_size
   )
   values (
     p_proof_id, p_edition, v_res_id, v_ref, p_kind::public.payment_kind,
-    p_name, p_email, p_phone, coalesce(p_notes, ''), p_file_path, p_file_type, p_file_size
+    p_name, p_document, p_email, p_phone, coalesce(p_notes, ''),
+    p_file_path, p_file_type, p_file_size
   );
 
   return query select true, null::text, v_ref;
@@ -445,12 +470,12 @@ $$;
 
 revoke all on function public.register_payment_proof(
   text, uuid, text, text, text, text, integer, text, text,
-  text, text, text, text, text, text, text, text, integer
+  text, text, text, text, text, text, text, text, text, integer
 ) from public, anon, authenticated;
 
 grant execute on function public.register_payment_proof(
   text, uuid, text, text, text, text, integer, text, text,
-  text, text, text, text, text, text, text, text, integer
+  text, text, text, text, text, text, text, text, text, integer
 ) to service_role;
 
 -- Bucket privado: sin políticas en storage.objects, solo service_role lee y
@@ -478,7 +503,7 @@ values (
   'Anestesia Regional Ecoguiada + Sedación TCI · Octubre 2026',
   20,
   'Anestesia Regional Ecoguiada + Sedación TCI',
-  'Octubre 23 y 24, 2026',
+  'Octubre 24 y 25, 2026',
   -- TODO: horas académicas reales. Mientras sea NULL el certificado no las menciona.
   null,
   'Avalado por SCARE – SARG'
@@ -489,6 +514,13 @@ on conflict (slug) do nothing;
 -- toca lo que esté vacío, así que no pisa nada que hayas editado a mano.
 update public.taller_editions
    set course_title = coalesce(course_title, 'Anestesia Regional Ecoguiada + Sedación TCI'),
-       dates_label  = coalesce(dates_label,  'Octubre 23 y 24, 2026'),
+       dates_label  = coalesce(dates_label,  'Octubre 24 y 25, 2026'),
        endorsement  = coalesce(endorsement,  'Avalado por SCARE – SARG')
  where slug = 'taller-2026-10';
+
+-- Corrección de fecha: la edición es el 24 y 25 de octubre, no el 23 y 24. Se
+-- acota al valor equivocado para no pisar una fecha editada a mano.
+update public.taller_editions
+   set dates_label = 'Octubre 24 y 25, 2026'
+ where slug = 'taller-2026-10'
+   and dates_label = 'Octubre 23 y 24, 2026';

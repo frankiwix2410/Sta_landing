@@ -39,10 +39,10 @@ export const taller = {
 
   /** Fechas del taller. `iso` alimenta el JSON-LD; `label` es lo que se lee en pantalla. */
   dates: {
-    label: "Octubre 23 y 24, 2026",
-    short: "23–24 OCT 2026",
-    startIso: "2026-10-23T08:00:00-04:00",
-    endIso: "2026-10-24T17:00:00-04:00",
+    label: "Octubre 24 y 25, 2026",
+    short: "24–25 OCT 2026",
+    startIso: "2026-10-24T08:00:00-04:00",
+    endIso: "2026-10-25T17:00:00-04:00",
   },
 
   endorsement: "Avalado por SCARE – SARG",

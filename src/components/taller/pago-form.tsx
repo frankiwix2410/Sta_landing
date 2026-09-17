@@ -161,19 +161,34 @@ export function PagoForm() {
         {errors.kind && <p className={errorClass}>{errors.kind}</p>}
       </fieldset>
 
-      <Field id="pago-name" label="Nombre completo" error={errors.name}>
-        <input
-          id="pago-name"
-          name="name"
-          required
-          type="text"
-          autoComplete="name"
-          maxLength={120}
-          placeholder="Tal como lo usaste al reservar"
-          aria-invalid={Boolean(errors.name)}
-          className={inputClass}
-        />
-      </Field>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Field id="pago-name" label="Nombre completo" error={errors.name}>
+          <input
+            id="pago-name"
+            name="name"
+            required
+            type="text"
+            autoComplete="name"
+            maxLength={120}
+            placeholder="Como aparece en tu documento"
+            aria-invalid={Boolean(errors.name)}
+            className={inputClass}
+          />
+        </Field>
+
+        <Field id="pago-document" label="Número de documento" error={errors.document}>
+          <input
+            id="pago-document"
+            name="document"
+            required
+            type="text"
+            maxLength={30}
+            placeholder="Cédula o pasaporte"
+            aria-invalid={Boolean(errors.document)}
+            className={inputClass}
+          />
+        </Field>
+      </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field id="pago-email" label="Email" error={errors.email}>

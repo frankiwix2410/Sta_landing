@@ -19,6 +19,8 @@ export type PaymentProofDraft = {
   price: Money | null;
   customer: {
     name: string;
+    /** Cédula o pasaporte de quien pagó, para cruzar el comprobante. */
+    document: string;
     email: string;
     phone: string;
     city: string;
@@ -130,6 +132,7 @@ export async function savePaymentProof(draft: PaymentProofDraft): Promise<SavePr
     p_currency: draft.price?.currency ?? null,
     p_kind: draft.kind,
     p_name: draft.customer.name,
+    p_document: draft.customer.document,
     p_email: draft.customer.email,
     p_phone: draft.customer.phone,
     p_city: draft.customer.city,
