@@ -10,6 +10,7 @@ const EASE = [0.16, 1, 0.3, 1] as const;
 
 const links = [
   { href: "#contenido", label: "Contenido" },
+  { href: "#galeria", label: "Galería" },
   { href: "#instructor", label: "Instructor" },
   { href: "#registro-pago", label: "Registrar pago" },
   { href: "#faq", label: "Preguntas" },

@@ -5,7 +5,7 @@ import { TallerHero } from "@/components/taller/hero";
 import { TallerNav } from "@/components/taller/nav";
 import { PagoSection } from "@/components/taller/pago-form";
 import { ReservaSection } from "@/components/taller/reserva-form";
-import { Contenido, Faq, Instructor } from "@/components/taller/sections";
+import { Contenido, Faq, Galeria, Instructor } from "@/components/taller/sections";
 import { getSeats } from "@/lib/reservations";
 import { taller } from "@/lib/taller";
 
@@ -73,6 +73,7 @@ export default async function TallerPage() {
       <main>
         <TallerHero />
         <Contenido />
+        <Galeria />
         <Instructor />
         <ReservaSection seats={seats} />
         <PagoSection />

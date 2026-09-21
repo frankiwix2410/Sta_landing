@@ -88,6 +88,17 @@ export function ReservaForm({ seats }: { seats: Seats | null }) {
     return <SoldOutPanel message={state.message} handoffUrl={state.handoffUrl} />;
   }
 
+  // Edición llena declarada en el catálogo: manda sobre el conteo de la base,
+  // porque los últimos cupos se cerraron por WhatsApp y no dejaron fila.
+  if (taller.soldOut) {
+    return (
+      <SoldOutPanel
+        message="Se vendieron todos los cupos de esta edición."
+        handoffUrl={waitlistLink()}
+      />
+    );
+  }
+
   // `seats` puede venir de una página cacheada, así que este cierre es solo
   // cosmético: quien llegue con la página vieja igual recibe el panel de
   // agotados al enviar, porque el conteo real se hace en la base de datos.
@@ -265,9 +276,9 @@ export function ReservaSection({ seats = null }: { seats?: Seats | null }) {
   // Con Supabase conectado el dato es real; sin él se cae al texto fijo del
   // catálogo, que es lo que había antes de tener base de datos.
   const scarcity =
-    seats && seats.isOpen && seats.remaining > 0 && seats.remaining <= LOW_SEATS
+    !taller.soldOut && seats && seats.isOpen && seats.remaining > 0 && seats.remaining <= LOW_SEATS
       ? `Quedan ${seats.remaining} de ${seats.total} cupos`
-      : taller.scarcity;
+      : `${taller.scarcity.value} ${taller.scarcity.label}`;
 
   return (
     <section id="reservar" className="bg-white px-5 py-24 sm:px-8 lg:px-16 lg:py-32">
@@ -280,16 +291,29 @@ export function ReservaSection({ seats = null }: { seats?: Seats | null }) {
 
           <Reveal>
             <h2 className="text-[clamp(30px,4vw,48px)] leading-[1.1] text-navy">
-              Asegura tu cupo
-              <span className="block text-azure">antes de que se agote.</span>
+              {taller.soldOut ? "Esta edición" : "Asegura tu cupo"}
+              <span className="block text-azure">
+                {taller.soldOut ? "ya está completa." : "antes de que se agote."}
+              </span>
             </h2>
           </Reveal>
 
           <Reveal delay={0.12}>
             <p className="mt-5 max-w-[420px] text-[15px] leading-[1.8] text-ink">
-              {scarcity}. El taller trabaja con grupos reducidos por estación, así
-              que el número de plazas es fijo. Completa el formulario y te confirmamos por
-              WhatsApp.
+              {taller.soldOut ? (
+                <>
+                  {scarcity}. El taller trabaja con grupos reducidos por estación, así que
+                  el número de plazas es fijo y no se amplía. Déjanos tus datos por
+                  WhatsApp: si se libera una plaza o abrimos una edición nueva, te
+                  avisamos primero.
+                </>
+              ) : (
+                <>
+                  {scarcity}. El taller trabaja con grupos reducidos por estación, así que
+                  el número de plazas es fijo. Completa el formulario y te confirmamos por
+                  WhatsApp.
+                </>
+              )}
             </p>
           </Reveal>
 

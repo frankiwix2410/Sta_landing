@@ -52,6 +52,71 @@ export function Contenido() {
   );
 }
 
+/* --------------------------------------------------------------- Galería */
+
+/**
+ * Fotos propias del taller. La retícula alterna alturas para que no se lea
+ * como un catálogo: en móvil queda en dos columnas y en escritorio en tres.
+ */
+export function Galeria() {
+  return (
+    <section id="galeria" className="bg-white px-5 py-24 sm:px-8 lg:px-16 lg:py-32">
+      <div className="mx-auto max-w-[1120px]">
+        <div className="flex flex-wrap items-end justify-between gap-6">
+          <div>
+            <Reveal className="eyebrow mb-4 text-azure">
+              <span className="block h-px w-6 bg-azure" />
+              El taller por dentro
+            </Reveal>
+            <WordsReveal
+              lines={["Práctica real,"]}
+              accent="no diapositivas."
+              accentClassName="text-azure"
+              className="text-[clamp(30px,4vw,48px)] leading-[1.1] text-navy"
+            />
+          </div>
+          <Reveal delay={0.1}>
+            <p className="max-w-[360px] text-[14.5px] leading-[1.8] text-ink">
+              Ultrasonido, phantoms y bombas de infusión en la mano desde el primer
+              módulo, con acompañamiento en cada estación.
+            </p>
+          </Reveal>
+        </div>
+
+        <div className="mt-12 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 lg:gap-5">
+          {taller.gallery.map((photo, i) => (
+            <Reveal key={photo.src} delay={(i % 3) * 0.08}>
+              <figure className="group relative overflow-hidden rounded-2xl bg-ice">
+                <div
+                  className={
+                    // La segunda de cada fila es más alta: rompe la cuadrícula
+                    // sin sacar ninguna foto de su proporción vertical.
+                    i % 3 === 1 ? "aspect-[3/4.4]" : "aspect-[3/4]"
+                  }
+                >
+                  <Image
+                    src={photo.src}
+                    alt={photo.alt}
+                    width={720}
+                    height={1280}
+                    sizes="(max-width: 640px) 45vw, (max-width: 1024px) 45vw, 350px"
+                    className="size-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-[1.04]"
+                  />
+                </div>
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-navy/80 via-navy/25 to-transparent p-4 pt-12">
+                  <figcaption className="text-[12.5px] leading-snug font-medium text-white sm:text-[13.5px]">
+                    {photo.caption}
+                  </figcaption>
+                </div>
+              </figure>
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /* ------------------------------------------------------------- Instructor */
 export function Instructor() {
   return (

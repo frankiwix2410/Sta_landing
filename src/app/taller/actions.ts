@@ -87,6 +87,26 @@ export async function createReservation(
     return { status: "error", errors };
   }
 
+  // Edición cerrada a mano en el catálogo. Se comprueba aquí y no solo en el
+  // formulario porque un server action es un endpoint público: sin esto, una
+  // petición directa seguiría creando reservas de una edición llena.
+  if (taller.soldOut) {
+    return {
+      status: "sold_out",
+      message: "Se vendieron todos los cupos de esta edición.",
+      handoffUrl: tallerWaLink(
+        [
+          `Hola, quiero entrar en la lista de espera del Taller de ${taller.title} ${taller.titleAccent}.`,
+          "",
+          `Nombre: ${customer.name}`,
+          `Email: ${customer.email}`,
+          `Ciudad: ${customer.city}`,
+          `Profesión: ${customer.profession}`,
+        ].join("\n"),
+      ),
+    };
+  }
+
   // El formulario ya no pregunta la modalidad: toda reserva entra como cupo
   // general y cualquier tarifa distinta se acuerda al confirmar por WhatsApp.
   const order: OrderDraft = {

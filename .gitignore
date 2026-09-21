@@ -42,3 +42,8 @@ next-env.d.ts
 
 # supabase
 supabase/.temp/
+
+# Originales pesados de las sesiones de fotos: se quedan en tu disco, no en
+# el repositorio ni en el servidor. Las versiones optimizadas viven en
+# public/assets/*.webp.
+fotos-originales/taller-2026-09/

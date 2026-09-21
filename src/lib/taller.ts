@@ -18,10 +18,19 @@ export const taller = {
   titleAccent: "+ Sedación TCI",
   kind: "Taller presencial",
 
+  /**
+   * Foto grande del hero. Es distinta a la del instructor a propósito: la
+   * misma imagen dos veces en la misma página se lee como plantilla.
+   */
+  heroPhoto: {
+    src: "/assets/taller-bomba-tci.webp",
+    alt: "Stevan J. Camelo junto a una bomba de infusión para sedación TCI",
+  },
+
   instructor: {
     name: "Stevan J. Camelo Castañeda",
     role: "Anestesiólogo intervencionista",
-    photo: "/assets/dr-brazos-cruzados.webp",
+    photo: "/assets/dr-oficina-sonrisa.webp",
     credentials: [
       "Anestesiólogo intervencionista",
       "Entrenamiento avanzado en anestesia regional y accesos vasculares ecoguiados",
@@ -46,7 +55,63 @@ export const taller = {
   },
 
   endorsement: "Avalado por SCARE – SARG",
-  scarcity: "80% de cupos vendidos",
+
+  /**
+   * Escasez que se anuncia en el hero y encima del formulario. `value` va en
+   * grande y `label` debajo; juntos forman la frase "100% de cupos vendidos".
+   */
+  scarcity: {
+    value: "100%",
+    label: "de cupos vendidos",
+  },
+
+  /**
+   * Edición llena: en vez del formulario de reserva se muestra el panel de
+   * cupos agotados con el botón de lista de espera, y el servidor rechaza
+   * cualquier reserva nueva. El registro de pago sigue abierto, porque quien
+   * ya reservó todavía tiene que subir su comprobante.
+   *
+   * Cuando abras cupos otra vez (o programes una edición nueva), pon `false`
+   * y ajusta `scarcity`.
+   */
+  soldOut: true,
+
+  /**
+   * Galería de la página del taller. Fotos propias del equipo: si se
+   * reemplazan, conviene que sigan siendo verticales para la retícula.
+   */
+  gallery: [
+    {
+      src: "/assets/taller-docencia-sta.webp",
+      alt: "Stevan J. Camelo exponiendo frente a la pantalla con el logo de STA",
+      caption: "Fundamento teórico antes de cada estación",
+    },
+    {
+      src: "/assets/taller-quirofano-perfil.webp",
+      alt: "Anestesiólogo con gorro y mascarilla en quirófano",
+      caption: "Técnica y asepsia como se hacen en quirófano",
+    },
+    {
+      src: "/assets/taller-equipo-mesa.webp",
+      alt: "Preparación de material e insumos sobre la mesa de trabajo",
+      caption: "Equipos y material listos antes de empezar",
+    },
+    {
+      src: "/assets/taller-quirofano-paciente.webp",
+      alt: "Monitorización y preparación del paciente antes del procedimiento",
+      caption: "Monitorización y preparación del paciente",
+    },
+    {
+      src: "/assets/taller-explicacion.webp",
+      alt: "Stevan J. Camelo explicando durante una sesión de formación",
+      caption: "Acompañamiento en grupos reducidos",
+    },
+    {
+      src: "/assets/dr-consultorio-azul.webp",
+      alt: "Stevan J. Camelo en su consultorio",
+      caption: "Quien dirige el taller, en su día a día",
+    },
+  ],
 
   contact: {
     /** Número principal: recibe las reservas del formulario. */

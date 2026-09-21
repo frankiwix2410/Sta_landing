@@ -101,7 +101,7 @@ export function TallerHero() {
               href="#reservar"
               className="inline-flex items-center gap-2.5 rounded-full bg-azure px-7 py-4 text-[14.5px] font-semibold text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-white hover:text-navy"
             >
-              Reservar mi cupo
+              {taller.soldOut ? "Entrar en lista de espera" : "Reservar mi cupo"}
             </SmoothLink>
             <SmoothLink
               href="#contenido"
@@ -129,13 +129,13 @@ export function TallerHero() {
             className="relative aspect-[1100/1550] overflow-hidden rounded-t-[180px] rounded-b-3xl bg-ice shadow-[0_40px_90px_-40px_rgba(0,0,0,.7)]"
           >
             <Image
-              src={taller.instructor.photo}
-              alt={taller.instructor.name}
-              width={900}
-              height={1600}
+              src={taller.heroPhoto.src}
+              alt={taller.heroPhoto.alt}
+              width={720}
+              height={1280}
               preload
               sizes="(max-width: 1024px) 80vw, 360px"
-              className="size-full object-cover object-[center_18%]"
+              className="size-full object-cover object-[center_22%]"
             />
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-navy/45 via-transparent to-transparent" />
           </motion.div>
@@ -147,9 +147,11 @@ export function TallerHero() {
             transition={reduce ? NONE : { duration: 0.9, delay: 1.05, ease: EASE }}
             className="absolute bottom-6 -left-3 rounded-2xl bg-white px-5 py-3.5 shadow-[0_24px_50px_-20px_rgba(0,0,0,.6)] sm:-left-7"
           >
-            <span className="block font-serif text-2xl leading-none text-navy">80%</span>
+            <span className="block font-serif text-2xl leading-none text-navy">
+              {taller.scarcity.value}
+            </span>
             <span className="mt-1 block max-w-[110px] text-[11.5px] leading-tight text-ink-soft">
-              de cupos vendidos
+              {taller.scarcity.label}
             </span>
           </motion.div>
         </motion.div>
