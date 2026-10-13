@@ -30,6 +30,12 @@ export const taller = {
   instructor: {
     name: "Stevan J. Camelo Castañeda",
     role: "Anestesiólogo intervencionista",
+    /** Así firma en los certificados (nombre corto y documento). */
+    signature: {
+      name: "MD. Stevan J. Camelo C.",
+      title: "Anestesiólogo",
+      document: "C.C. 1.136.882.468",
+    },
     photo: "/assets/dr-oficina-sonrisa.webp",
     credentials: [
       "Anestesiólogo intervencionista",
@@ -43,6 +49,7 @@ export const taller = {
   venue: {
     name: "Policlínico San Francisco",
     city: "Maracaibo",
+    region: "Zulia",
     country: "Venezuela",
   },
 
