@@ -53,7 +53,7 @@ export default async function EditarTallerPage({ params }: { params: Promise<{ i
     >
       <div className="flex flex-col gap-5">
         <TallerAcciones taller={taller} reservas={reservas} />
-        <TallerForm key={taller.id} taller={taller} />
+        <TallerForm key={taller.id} taller={taller} slugEditable={reservas === 0} />
       </div>
     </AdminShell>
   );

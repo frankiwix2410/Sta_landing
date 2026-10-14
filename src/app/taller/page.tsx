@@ -13,20 +13,11 @@ import { cargarTallerPublico } from "@/lib/talleres/publico";
 import { nombreCurso, type TallerVista } from "@/lib/talleres/vista";
 
 /**
- * Estática con regeneración cada 5 minutos, como antes: el conteo en pantalla
- * es informativo y el cupo real se comprueba en la base al enviar. Los cambios
- * hechos desde /admin invalidan la página al instante (`revalidatePath`).
+ * Se renderiza en cada petición: los cambios del admin se ven al instante y no
+ * queda nada cacheado del build (CI compila sin Supabase y dejaría fijada la
+ * página "Próxima edición").
  */
-export const revalidate = 300;
-
-/**
- * Con Supabase configurado, `sin_conexion` es un fallo transitorio: lanzar hace
- * que ISR conserve la última página buena en vez de cachear "Próxima edición"
- * durante 5 minutos. Sin Supabase (desarrollo) sí se muestra la página vacía.
- */
-function falloDeLectura(): never {
-  throw new Error("[taller] no se pudo leer el taller activo");
-}
+export const dynamic = "force-dynamic";
 
 function descripcion(t: TallerVista) {
   return `${t.dates.label} · ${t.venue.name}, ${t.venue.city}. ${t.kind} con ${t.instructor.name}: anestesia regional ecoguiada, accesos vasculares y sedación TCI.${t.endorsement ? ` ${t.endorsement}.` : ""}`;
@@ -34,7 +25,9 @@ function descripcion(t: TallerVista) {
 
 export async function generateMetadata(): Promise<Metadata> {
   const publico = await cargarTallerPublico();
-  if (publico.kind === "sin_conexion" && supabaseConfigured) falloDeLectura();
+  if (publico.kind === "sin_conexion" && supabaseConfigured) {
+    return { title: "Taller · STA", robots: { index: false, follow: false } };
+  }
   if (publico.kind !== "ok") {
     return { title: "Taller · Próxima edición", robots: { index: true, follow: true } };
   }
@@ -85,7 +78,8 @@ function jsonLd(t: TallerVista) {
 
 export default async function TallerPage() {
   const publico = await cargarTallerPublico();
-  if (publico.kind === "sin_conexion" && supabaseConfigured) falloDeLectura();
+  if (publico.kind === "sin_conexion" && supabaseConfigured)
+    return <ProximaEdicion motivo="sin_conexion" />;
   if (publico.kind !== "ok") return <ProximaEdicion />;
 
   const t = publico.vista;
@@ -96,7 +90,7 @@ export default async function TallerPage() {
       <TallerNav />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd(t)) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd(t)).replace(/</g, "\\u003c") }}
       />
       <main>
         <TallerHero />

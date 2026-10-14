@@ -87,6 +87,13 @@ describe("leerTallerForm", () => {
     expect(!r.ok && r.errores.horas).toBeTruthy();
   });
 
+  it("rechaza una foto principal que no empieza por /", () => {
+    const r = leerTallerForm(form({ ...valido, foto_principal: "assets/foto.webp" }));
+    expect(!r.ok && r.errores.foto_principal).toMatch(/empezar por \//);
+    const ok = leerTallerForm(form({ ...valido, foto_principal: "/assets/foto.webp" }));
+    expect(ok.ok).toBe(true);
+  });
+
   it("slug inválido es error", () => {
     const r = leerTallerForm(form({ ...valido, slug: "Taller Marzo!" }));
     expect(!r.ok && r.errores.slug).toBeTruthy();

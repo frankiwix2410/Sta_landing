@@ -127,11 +127,17 @@ export async function crearTaller(input: TallerInput): Promise<Resultado<string>
 export async function actualizarTaller(id: string, input: TallerInput): Promise<Resultado<null>> {
   const supabase = getSupabase();
   if (!supabase) return fallo("sin_conexion");
-  // El slug no se cambia: es la clave con la que las reservas apuntan al taller.
-  const { slug, ...fila } = tallerAFila(input);
-  void slug;
+  // El slug es la clave con la que las reservas apuntan al taller: solo se
+  // puede cambiar mientras no tenga ninguna.
+  const actual = await obtenerTaller(id);
+  if (!actual.ok) return actual;
+  const reservas = await contarInscripciones(actual.valor.slug);
+  if (reservas === null) return fallo("error");
+  const { slug, ...sinSlug } = tallerAFila(input);
+  const fila = reservas === 0 ? { slug, ...sinSlug } : sinSlug;
   const { data, error } = await supabase.from("talleres").update(fila).eq("id", id).select("id");
   if (error) {
+    if (error.code === "22P02") return fallo("no_encontrado");
     console.error("[talleres] no se pudo actualizar", { id, error });
     return fallo(motivoDesdeError(error));
   }
@@ -143,6 +149,7 @@ export async function cambiarEstadoTaller(id: string, estado: TallerEstado): Pro
   if (!supabase) return fallo("sin_conexion");
   const { data, error } = await supabase.from("talleres").update({ estado }).eq("id", id).select("id");
   if (error) {
+    if (error.code === "22P02") return fallo("no_encontrado");
     console.error("[talleres] no se pudo cambiar el estado", { id, estado, error });
     return fallo(motivoDesdeError(error));
   }

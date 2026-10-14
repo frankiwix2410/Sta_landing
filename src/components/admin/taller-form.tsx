@@ -18,7 +18,14 @@ const TARIFA_VACIA: Tarifa = { id: "", nombre: "", descripcion: "", precio: 0, d
  * 19 vacía los campos no controlados después de cada envío por `action`, y un
  * error de validación borraría todo lo escrito.
  */
-export function TallerForm({ taller }: { taller?: Taller }) {
+export function TallerForm({
+  taller,
+  slugEditable = !taller,
+}: {
+  taller?: Taller;
+  /** El slug solo se cambia mientras el taller no tiene reservas. */
+  slugEditable?: boolean;
+}) {
   const [state, action, pending] = useActionState(guardarTaller, inicial);
   const errores = state.status === "error" ? state.errores : {};
   const [tarifas, setTarifas] = useState<FilaTarifa[]>(() =>
@@ -74,10 +81,12 @@ export function TallerForm({ taller }: { taller?: Taller }) {
         {campo("modalidad", "Modalidad", { defaultValue: taller?.modalidad ?? "Taller presencial" })}
         {campo("slug", "Identificador (slug)", {
           defaultValue: taller?.slug ?? "",
-          readOnly: Boolean(taller),
-          ayuda: taller
-            ? "No se cambia: las reservas apuntan a este identificador."
-            : "Vacío = taller-AAAA-MM según la fecha de inicio.",
+          readOnly: !slugEditable,
+          ayuda: !taller
+            ? "Vacío = taller-AAAA-MM según la fecha de inicio."
+            : slugEditable
+              ? "Puedes cambiarlo mientras no tenga reservas."
+              : "No se cambia: las reservas apuntan a este identificador.",
         })}
       </fieldset>
 

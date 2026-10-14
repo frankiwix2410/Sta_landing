@@ -37,9 +37,18 @@ function currentPrice(t: TallerVista): Money | null {
  * Taller activo leído de la base en el momento del envío. Nunca se confía en lo
  * que la página tenía cacheado: el estado pudo cambiar desde el admin.
  */
-async function tallerActivo(): Promise<TallerVista | null> {
+async function tallerActivo(): Promise<
+  { taller: TallerVista } | { taller: null; mensaje: string }
+> {
   const publico = await cargarTallerPublico();
-  return publico.kind === "ok" ? publico.vista : null;
+  if (publico.kind === "ok") return { taller: publico.vista };
+  return {
+    taller: null,
+    mensaje:
+      publico.kind === "sin_conexion"
+        ? "No pudimos conectar con el sistema de reservas. Inténtalo en unos minutos o escríbenos por WhatsApp."
+        : "Ahora mismo no hay un taller con inscripciones abiertas. Escríbenos por WhatsApp.",
+  };
 }
 
 function waitlistMessage(t: TallerVista, customer: { name: string; email: string; city: string; profession: string }) {
@@ -111,14 +120,11 @@ export async function createReservation(
     return { status: "error", errors };
   }
 
-  const t = await tallerActivo();
-  if (!t) {
-    return {
-      status: "error",
-      errors: {},
-      message: "Ahora mismo no hay un taller con inscripciones abiertas. Escríbenos por WhatsApp.",
-    };
+  const activo = await tallerActivo();
+  if (!activo.taller) {
+    return { status: "error", errors: {}, message: activo.mensaje };
   }
+  const t = activo.taller;
 
   // La página puede estar cacheada: se vuelve a comprobar aquí porque un
   // server action es un endpoint público.
@@ -244,17 +250,23 @@ export async function registerPayment(
     else errors.proof = "Formato no válido. Sube una imagen (JPG, PNG, HEIC) o un PDF.";
   }
 
+  const activo = await tallerActivo();
+  const t = activo.taller;
+
+  if (t && kind === "deposit" && !t.porcentajesPago.includes(50))
+    errors.kind = "Este taller solo acepta el pago completo.";
+
   if (Object.keys(errors).length > 0 || !kind || !file) {
     return { status: "error", errors };
   }
 
-  const t = await tallerActivo();
   if (!t || !t.mostrar.pago) {
     return {
       status: "error",
       errors: {},
-      message:
-        "El registro de pagos de esta edición está cerrado. Envíanos tu comprobante por WhatsApp y lo resolvemos.",
+      message: activo.taller
+        ? "El registro de pagos de esta edición está cerrado. Envíanos tu comprobante por WhatsApp y lo resolvemos."
+        : activo.mensaje,
       handoffUrl: tallerWaLink(
         `Hola, quiero registrar un pago. Nombre: ${customer.name}. Documento: ${document}.`,
       ),

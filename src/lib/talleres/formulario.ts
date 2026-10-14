@@ -70,6 +70,10 @@ export function leerTallerForm(fd: FormData): LecturaTaller {
   const elegidos = fd.getAll("porcentajes_pago").map(Number);
   const porcentajesPago = PORCENTAJES_PAGO.filter((p) => p === 100 || elegidos.includes(p));
 
+  const fotoPrincipal = opcional("foto_principal");
+  if (fotoPrincipal && !fotoPrincipal.startsWith("/"))
+    errores.foto_principal = "La ruta debe empezar por / (p. ej. /assets/foto.webp).";
+
   const moneda = (s("moneda") || "COP").toUpperCase();
   if (!/^[A-Z]{3}$/.test(moneda)) errores.moneda = "Código de moneda de 3 letras (COP, USD…).";
 
@@ -98,7 +102,7 @@ export function leerTallerForm(fd: FormData): LecturaTaller {
       moneda,
       preciosPublicados: fd.get("precios_publicados") === "on",
       tarifas,
-      fotoPrincipal: opcional("foto_principal"),
+      fotoPrincipal,
       fotoPrincipalAlt: opcional("foto_principal_alt"),
       firmaNombre: opcional("firma_nombre"),
       firmaCargo: opcional("firma_cargo"),

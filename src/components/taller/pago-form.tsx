@@ -49,6 +49,7 @@ function Field({
 
 export function PagoForm() {
   const taller = useTaller();
+  const aceptaAbono = taller.porcentajesPago.includes(50);
   const [state, formAction, pending] = useActionState(registerPayment, initialState);
   const [kind, setKind] = useState<PaymentKind | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -137,7 +138,7 @@ export function PagoForm() {
       <fieldset>
         <legend className={labelClass}>¿Qué pagaste?</legend>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {KINDS.map((k) => (
+          {KINDS.filter((k) => k.value !== "deposit" || aceptaAbono).map((k) => (
             <label
               key={k.value}
               className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3.5 transition-colors duration-200 ${
@@ -323,7 +324,7 @@ export function PagoForm() {
         />
       </Field>
 
-      {kind === "deposit" && (
+      {aceptaAbono && kind === "deposit" && (
         <div>
           <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-cream px-4 py-3.5 text-[12.5px] leading-relaxed text-navy">
             <input type="checkbox" name="policy" className="mt-0.5 accent-azure" />
@@ -377,6 +378,7 @@ export function PagoForm() {
 
 export function PagoSection() {
   const taller = useTaller();
+  const aceptaAbono = taller.porcentajesPago.includes(50);
   return (
     <section
       id="registro-pago"
@@ -400,22 +402,26 @@ export function PagoSection() {
 
           <Reveal delay={0.12}>
             <p className="mt-5 max-w-[420px] text-[15px] leading-[1.8] text-ice/80">
-              Si ya hiciste el abono del 50% o pagaste el taller completo, envíanos tus datos
-              con la captura o el comprobante de la transferencia. Al registrarlo te
+              {aceptaAbono
+                ? "Si ya hiciste el abono del 50% o pagaste el taller completo, envíanos tus datos con la captura o el comprobante de la transferencia."
+                : "Si ya pagaste el taller completo, envíanos tus datos con la captura o el comprobante de la transferencia."}{" "}
+              Al registrarlo te
               asignamos tu número de reserva, y te confirmamos el cupo por WhatsApp cuando
               verifiquemos el pago.
             </p>
           </Reveal>
 
+          {aceptaAbono && (
           <Reveal delay={0.18}>
-            <div className="mt-8 max-w-[440px] rounded-2xl border border-white/20 bg-white/[0.06] p-5">
-              <p className="flex items-center gap-2.5 text-[13px] font-semibold tracking-[0.06em] text-sky uppercase">
-                <span className="block size-1.5 rounded-full bg-sky" />
-                Importante sobre el abono
-              </p>
-              <p className="mt-3 text-[15px] leading-[1.75] text-white">{taller.payment.policy}</p>
-            </div>
-          </Reveal>
+              <div className="mt-8 max-w-[440px] rounded-2xl border border-white/20 bg-white/[0.06] p-5">
+                <p className="flex items-center gap-2.5 text-[13px] font-semibold tracking-[0.06em] text-sky uppercase">
+                  <span className="block size-1.5 rounded-full bg-sky" />
+                  Importante sobre el abono
+                </p>
+                <p className="mt-3 text-[15px] leading-[1.75] text-white">{taller.payment.policy}</p>
+              </div>
+            </Reveal>
+          )}
         </div>
 
         <Reveal delay={0.15}>
