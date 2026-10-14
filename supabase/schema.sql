@@ -4,6 +4,10 @@
 -- Cómo aplicarlo: Supabase → SQL Editor → pegar este archivo → Run.
 -- Es idempotente: se puede volver a ejecutar sin romper nada.
 --
+-- Después de este archivo se aplican, en orden, los de `supabase/migrations/`.
+-- Este archivo describe el esquema inicial; las migraciones lo transforman
+-- (p. ej. `taller_editions` pasa a llamarse `talleres`).
+--
 -- Modelo de seguridad: RLS activo y SIN políticas. Eso deja las tablas
 -- inaccesibles para las claves `anon` y `authenticated`; solo la clave
 -- `service_role` (que vive únicamente en el servidor, en
