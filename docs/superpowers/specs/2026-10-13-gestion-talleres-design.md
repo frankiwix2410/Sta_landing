@@ -288,11 +288,16 @@ proceso) para frenar enumeración.
 
 Un spec, tres planes de implementación:
 
-1. **Datos + admin de talleres**: migración, tablas, funciones base, admin de
-   talleres (CRUD, estados, duplicar), `/taller` leyendo el taller activo.
-2. **Inscripciones y pagos**: formularios con documento (reserva y pago en dos
-   pasos), admin de inscritos y pagos.
-3. **Certificados**: emisión automática, hoja personalizada, QR, verificación,
-   descarga pública por documento y desde el admin.
+1. **Datos + admin de talleres**: migración de `taller_editions` → `talleres`
+   (3.2 y paso 2 de 3.7), funciones de reserva/pago adaptadas a la tabla
+   nueva, admin de talleres (CRUD, estados, duplicar), `/taller` leyendo el
+   taller activo. `reservations` y `payment_proofs` no cambian todavía.
+2. **Inscripciones y pagos**: migración a `personas` / `inscripciones` /
+   `comprobantes` (3.1, 3.3, 3.4, pasos 3–6 de 3.7), formularios con documento
+   (reserva y pago en dos pasos), admin de inscritos y pagos. `talleres.id`
+   pasa a ser la clave primaria.
+3. **Certificados**: tabla `certificados` (3.5), emisión automática, hoja
+   personalizada, QR, verificación, descarga pública por documento y desde el
+   admin.
 
 Cada etapa deja el sitio funcionando y desplegable.
