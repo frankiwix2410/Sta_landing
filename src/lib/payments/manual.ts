@@ -1,4 +1,4 @@
-import { taller, tallerWaLink } from "@/lib/taller";
+import { tallerWaLink } from "@/lib/taller";
 import type { CheckoutResult, OrderDraft, PaymentProvider } from "./types";
 
 /**
@@ -13,7 +13,7 @@ export const manualProvider: PaymentProvider = {
 
   async createCheckout(order: OrderDraft): Promise<CheckoutResult> {
     const lines = [
-      `Hola, quiero reservar mi cupo en el Taller de ${taller.title} ${taller.titleAccent}.`,
+      `Hola, quiero reservar mi cupo en el ${order.courseName}.`,
       "",
       `Referencia: ${order.reference}`,
       `Modalidad: ${order.tierName}`,

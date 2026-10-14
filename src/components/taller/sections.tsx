@@ -3,10 +3,12 @@
 import Image from "next/image";
 import { LineDraw, Reveal, WordsReveal } from "@/components/ui/motion-primitives";
 import { InstagramIcon, WhatsAppIcon } from "@/components/ui/icons";
-import { taller, tallerWaLink } from "@/lib/taller";
+import { tallerWaLink } from "@/lib/taller";
+import { useTaller } from "@/lib/talleres/contexto";
 
 /* -------------------------------------------------------------- Contenido */
 export function Contenido() {
+  const taller = useTaller();
   return (
     <section id="contenido" className="bg-cream px-5 py-24 sm:px-8 lg:px-16 lg:py-32">
       <div className="mx-auto max-w-[1120px]">
@@ -59,6 +61,7 @@ export function Contenido() {
  * como un catálogo: en móvil queda en dos columnas y en escritorio en tres.
  */
 export function Galeria() {
+  const taller = useTaller();
   return (
     <section id="galeria" className="bg-white px-5 py-24 sm:px-8 lg:px-16 lg:py-32">
       <div className="mx-auto max-w-[1120px]">
@@ -119,6 +122,7 @@ export function Galeria() {
 
 /* ------------------------------------------------------------- Instructor */
 export function Instructor() {
+  const taller = useTaller();
   return (
     <section id="instructor" className="grain relative overflow-hidden bg-navy px-5 py-24 sm:px-8 lg:px-16 lg:py-32">
       <div className="pointer-events-none absolute top-1/2 -left-[8%] size-[38vw] max-h-[520px] max-w-[520px] -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(88,134,232,.22),transparent_65%)] blur-2xl" />
@@ -179,6 +183,7 @@ export function Instructor() {
 
 /* -------------------------------------------------------------------- FAQ */
 export function Faq() {
+  const taller = useTaller();
   return (
     <section id="faq" className="bg-cream px-5 py-24 sm:px-8 lg:px-16 lg:py-32">
       <div className="mx-auto grid max-w-[1120px] grid-cols-1 gap-12 lg:grid-cols-[.8fr_1.2fr] lg:gap-16">

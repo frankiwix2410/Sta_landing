@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from "motion/react";
 import { SmoothLink } from "@/components/ui/smooth-link";
+import { useTaller } from "@/lib/talleres/contexto";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
@@ -24,6 +25,10 @@ const links = [
  * pantalla completa, igual que en el nav del sitio.
  */
 export function TallerNav() {
+  const taller = useTaller();
+  // "Registrar pago" solo existe en la página si el taller acepta pagos.
+  const visibles = links.filter((l) => l.href !== "#registro-pago" || taller.mostrar.pago);
+  const cta = taller.mostrar.reserva ? "Reservar cupo" : taller.mostrar.listaEspera ? "Lista de espera" : null;
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const { scrollY } = useScroll();
@@ -59,7 +64,7 @@ export function TallerNav() {
         </Link>
 
         <div className="hidden items-center gap-6 lg:flex xl:gap-8">
-          {links.map((l) => (
+          {visibles.map((l) => (
             <SmoothLink
               key={l.href}
               href={l.href}
@@ -72,17 +77,19 @@ export function TallerNav() {
         </div>
 
         <div className="flex flex-none items-center gap-2 sm:gap-3">
-          <SmoothLink
-            href="#reservar"
-            onClick={() => setOpen(false)}
-            // Oculto en móvil: junto al logo y al botón de menú no cabe. Abajo
-            // de `sm` la reserva se alcanza desde el menú.
-            className={`hidden rounded-full px-5 py-[11px] text-[13px] font-semibold transition-all duration-300 hover:-translate-y-0.5 sm:inline-flex ${
-              onDark ? "bg-white text-navy hover:bg-ice" : "bg-navy text-white hover:bg-azure"
-            }`}
-          >
-            Reservar cupo
-          </SmoothLink>
+          {cta && (
+            <SmoothLink
+              href="#reservar"
+              onClick={() => setOpen(false)}
+              // Oculto en móvil: junto al logo y al botón de menú no cabe. Abajo
+              // de `sm` la reserva se alcanza desde el menú.
+              className={`hidden rounded-full px-5 py-[11px] text-[13px] font-semibold transition-all duration-300 hover:-translate-y-0.5 sm:inline-flex ${
+                onDark ? "bg-white text-navy hover:bg-ice" : "bg-navy text-white hover:bg-azure"
+              }`}
+            >
+              {cta}
+            </SmoothLink>
+          )}
 
           <button
             onClick={() => setOpen((v) => !v)}
@@ -113,7 +120,7 @@ export function TallerNav() {
             transition={{ duration: 0.7, ease: EASE }}
             className="grain fixed inset-0 z-119 flex flex-col items-center justify-center gap-5 bg-navy px-6 lg:hidden"
           >
-            {links.map((l, i) => (
+            {visibles.map((l, i) => (
               <motion.div
                 key={l.href}
                 initial={{ opacity: 0, y: 20 }}
@@ -129,19 +136,21 @@ export function TallerNav() {
                 </SmoothLink>
               </motion.div>
             ))}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5, duration: 0.6, ease: EASE }}
-            >
-              <SmoothLink
-                href="#reservar"
-                onClick={() => setOpen(false)}
-                className="mt-2 inline-flex rounded-full bg-azure px-7 py-3.5 text-sm font-semibold text-white"
+            {cta && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5, duration: 0.6, ease: EASE }}
               >
-                Reservar cupo
-              </SmoothLink>
-            </motion.div>
+                <SmoothLink
+                  href="#reservar"
+                  onClick={() => setOpen(false)}
+                  className="mt-2 inline-flex rounded-full bg-azure px-7 py-3.5 text-sm font-semibold text-white"
+                >
+                  {cta}
+                </SmoothLink>
+              </motion.div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

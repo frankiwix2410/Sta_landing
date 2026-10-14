@@ -6,20 +6,28 @@ import { motion, useScroll, useTransform } from "motion/react";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { WordsReveal } from "@/components/ui/motion-primitives";
 import { SmoothLink } from "@/components/ui/smooth-link";
-import { taller } from "@/lib/taller";
+import { useTaller } from "@/lib/talleres/contexto";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 /** Transición instantánea: mismo DOM inicial, sin movimiento. */
 const NONE = { duration: 0 } as const;
 
-/** Datos que el flyer pone en grande: fecha, sede y aval. */
-const facts = [
-  { k: "Fecha", v: taller.dates.label },
-  { k: "Sede", v: `${taller.venue.name} · ${taller.venue.city}` },
-  { k: "Aval", v: "SCARE – SARG" },
-];
-
 export function TallerHero() {
+  const taller = useTaller();
+  /** Datos que el flyer pone en grande: fecha, sede y aval. */
+  const facts = [
+    { k: "Fecha", v: taller.dates.label },
+    { k: "Sede", v: `${taller.venue.name} · ${taller.venue.city}` },
+    ...(taller.endorsement
+      ? [{ k: "Aval", v: taller.endorsement.replace(/^Avalado por\s*/i, "") }]
+      : []),
+  ];
+  // Sin reserva ni lista de espera (taller finalizado) no hay a dónde llevar el botón.
+  const cta = taller.mostrar.reserva
+    ? "Reservar mi cupo"
+    : taller.mostrar.listaEspera
+      ? "Entrar en lista de espera"
+      : null;
   const ref = useRef<HTMLElement>(null);
   const reduce = useReducedMotion();
 
@@ -97,12 +105,14 @@ export function TallerHero() {
             transition={reduce ? NONE : { duration: 0.9, delay: 0.75, ease: EASE }}
             className="mt-9 flex flex-wrap items-center gap-3.5"
           >
-            <SmoothLink
-              href="#reservar"
-              className="inline-flex items-center gap-2.5 rounded-full bg-azure px-7 py-4 text-[14.5px] font-semibold text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-white hover:text-navy"
-            >
-              {taller.soldOut ? "Entrar en lista de espera" : "Reservar mi cupo"}
-            </SmoothLink>
+            {cta && (
+              <SmoothLink
+                href="#reservar"
+                className="inline-flex items-center gap-2.5 rounded-full bg-azure px-7 py-4 text-[14.5px] font-semibold text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-white hover:text-navy"
+              >
+                {cta}
+              </SmoothLink>
+            )}
             <SmoothLink
               href="#contenido"
               className="inline-flex items-center gap-2.5 rounded-full border border-white/35 px-7 py-4 text-[14.5px] font-semibold text-white transition-all duration-300 hover:-translate-y-0.5 hover:border-white hover:bg-white/10"

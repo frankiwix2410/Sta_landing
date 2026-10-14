@@ -1,5 +1,4 @@
 import type { OrderDraft } from "@/lib/payments";
-import { taller } from "@/lib/taller";
 import { getSupabase } from "./supabase";
 import type { SaveResult, Seats } from "./types";
 
@@ -16,20 +15,12 @@ type CreateReservationRow = {
   seats_remaining: number;
 };
 
-/** Fila de la vista `public.taller_availability`. */
-type AvailabilityRow = {
-  total_seats: number;
-  taken: number;
-  remaining: number;
-  is_open: boolean;
-};
-
-function toSeats(row: AvailabilityRow): Seats {
+function toSeats(row: CreateReservationRow): Seats {
   return {
-    total: row.total_seats,
-    taken: row.taken,
-    remaining: row.remaining,
-    isOpen: row.is_open,
+    total: row.seats_total,
+    taken: row.seats_taken,
+    remaining: row.seats_remaining,
+    isOpen: row.reason !== "closed",
   };
 }
 
@@ -40,7 +31,7 @@ function toSeats(row: AvailabilityRow): Seats {
  * Postgres, no este código: hacerlo aquí con un SELECT y luego un INSERT deja
  * una ventana en la que dos envíos simultáneos venden la misma plaza.
  */
-export async function saveReservation(order: OrderDraft): Promise<SaveResult> {
+export async function saveReservation(edition: string, order: OrderDraft): Promise<SaveResult> {
   const supabase = getSupabase();
 
   if (!supabase) {
@@ -51,7 +42,7 @@ export async function saveReservation(order: OrderDraft): Promise<SaveResult> {
   }
 
   const { data, error } = await supabase.rpc("create_reservation", {
-    p_edition: taller.edition,
+    p_edition: edition,
     p_reference: order.reference,
     p_tier_id: order.tierId,
     p_tier_name: order.tierName,
@@ -81,12 +72,7 @@ export async function saveReservation(order: OrderDraft): Promise<SaveResult> {
     return { kind: "error" };
   }
 
-  const seats = toSeats({
-    total_seats: row.seats_total,
-    taken: row.seats_taken,
-    remaining: row.seats_remaining,
-    is_open: row.reason !== "closed",
-  });
+  const seats = toSeats(row);
 
   if (row.ok && row.reservation_id)
     return { kind: "saved", id: row.reservation_id, seats };
@@ -98,29 +84,4 @@ export async function saveReservation(order: OrderDraft): Promise<SaveResult> {
     reason: row.reason,
   });
   return { kind: "error" };
-}
-
-/**
- * Cupos disponibles de la edición actual, o `null` si no se pueden consultar.
- *
- * Solo alimenta el texto de la página. La decisión de aceptar o rechazar una
- * reserva se toma siempre dentro de `saveReservation`, que es la única lectura
- * que no puede quedarse obsoleta.
- */
-export async function getSeats(): Promise<Seats | null> {
-  const supabase = getSupabase();
-  if (!supabase) return null;
-
-  const { data, error } = await supabase
-    .from("taller_availability")
-    .select("total_seats, taken, remaining, is_open")
-    .eq("slug", taller.edition)
-    .maybeSingle<AvailabilityRow>();
-
-  if (error || !data) {
-    if (error) console.error("[taller] no se pudo leer la disponibilidad", error);
-    return null;
-  }
-
-  return toSeats(data);
 }

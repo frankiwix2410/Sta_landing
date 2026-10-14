@@ -4,82 +4,98 @@ import { TallerFooter } from "@/components/taller/footer";
 import { TallerHero } from "@/components/taller/hero";
 import { TallerNav } from "@/components/taller/nav";
 import { PagoSection } from "@/components/taller/pago-form";
+import { ProximaEdicion } from "@/components/taller/proxima-edicion";
 import { ReservaSection } from "@/components/taller/reserva-form";
 import { Contenido, Faq, Galeria, Instructor } from "@/components/taller/sections";
-import { getSeats } from "@/lib/reservations";
-import { taller } from "@/lib/taller";
+import { TallerProvider } from "@/lib/talleres/contexto";
+import { cargarTallerPublico } from "@/lib/talleres/publico";
+import { nombreCurso, type TallerVista } from "@/lib/talleres/vista";
 
 /**
- * La página sigue siendo estática, pero se regenera cada 5 minutos para
- * refrescar el conteo de cupos. No se hace dinámica a propósito: el número en
- * pantalla es solo informativo y el cupo real se comprueba dentro de la
- * transacción al enviar el formulario, así que unos minutos de desfase no
- * pueden vender una plaza de más.
+ * Estática con regeneración cada 5 minutos, como antes: el conteo en pantalla
+ * es informativo y el cupo real se comprueba en la base al enviar. Los cambios
+ * hechos desde /admin invalidan la página al instante (`revalidatePath`).
  */
 export const revalidate = 300;
 
-const name = `Taller de ${taller.title} ${taller.titleAccent}`;
-const description = `${taller.dates.label} · ${taller.venue.name}, ${taller.venue.city}. Taller presencial con ${taller.instructor.name}: 7 módulos prácticos de anestesia regional ecoguiada, accesos vasculares y sedación TCI. ${taller.endorsement}.`;
+function descripcion(t: TallerVista) {
+  return `${t.dates.label} · ${t.venue.name}, ${t.venue.city}. ${t.kind} con ${t.instructor.name}: anestesia regional ecoguiada, accesos vasculares y sedación TCI.${t.endorsement ? ` ${t.endorsement}.` : ""}`;
+}
 
-export const metadata: Metadata = {
-  title: `${name} · ${taller.dates.label}`,
-  description,
-  keywords: [
-    "taller anestesia regional",
-    "anestesia regional ecoguiada",
-    "sedación TCI",
-    "bloqueos ecoguiados",
-    "accesos vasculares ecoguiados",
-    "curso anestesiología Maracaibo",
-  ],
-  openGraph: { title: name, description, type: "website", locale: "es_CO" },
-  robots: { index: true, follow: true },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const publico = await cargarTallerPublico();
+  if (publico.kind !== "ok") {
+    return { title: "Taller · Próxima edición", robots: { index: true, follow: true } };
+  }
+  const t = publico.vista;
+  const name = nombreCurso(t);
+  const description = descripcion(t);
+  return {
+    title: `${name} · ${t.dates.label}`,
+    description,
+    keywords: [
+      "taller anestesia regional",
+      "anestesia regional ecoguiada",
+      "sedación TCI",
+      "bloqueos ecoguiados",
+      "accesos vasculares ecoguiados",
+      `curso anestesiología ${t.venue.city}`,
+    ],
+    openGraph: { title: name, description, type: "website", locale: "es_CO" },
+    robots: { index: true, follow: true },
+  };
+}
 
 /** Ficha de evento para que el taller pueda aparecer como tal en buscadores. */
-const jsonLd = {
-  "@context": "https://schema.org",
-  "@type": "EducationEvent",
-  name,
-  description,
-  startDate: taller.dates.startIso,
-  endDate: taller.dates.endIso,
-  eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
-  eventStatus: "https://schema.org/EventScheduled",
-  location: {
-    "@type": "Place",
-    name: taller.venue.name,
-    address: {
-      "@type": "PostalAddress",
-      addressLocality: taller.venue.city,
-      addressCountry: "VE",
+function jsonLd(t: TallerVista) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "EducationEvent",
+    name: nombreCurso(t),
+    description: descripcion(t),
+    startDate: t.dates.startIso,
+    endDate: t.dates.endIso,
+    eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+    eventStatus: "https://schema.org/EventScheduled",
+    location: {
+      "@type": "Place",
+      name: t.venue.name,
+      address: {
+        "@type": "PostalAddress",
+        addressLocality: t.venue.city,
+        addressRegion: t.venue.region || undefined,
+        addressCountry: t.venue.country,
+      },
     },
-  },
-  performer: { "@type": "Person", name: taller.instructor.name },
-  organizer: { "@type": "Organization", name: "STA", url: taller.contact.instagramUrl },
-};
+    performer: { "@type": "Person", name: t.instructor.name },
+    organizer: { "@type": "Organization", name: "STA", url: t.contact.instagramUrl },
+  };
+}
 
 export default async function TallerPage() {
-  const seats = await getSeats();
+  const publico = await cargarTallerPublico();
+  if (publico.kind !== "ok") return <ProximaEdicion />;
+
+  const t = publico.vista;
 
   return (
-    <>
+    <TallerProvider value={t}>
       <ScrollProgress />
       <TallerNav />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd(t)) }}
       />
       <main>
         <TallerHero />
         <Contenido />
         <Galeria />
         <Instructor />
-        <ReservaSection seats={seats} />
-        <PagoSection />
+        {(t.mostrar.reserva || t.mostrar.listaEspera) && <ReservaSection />}
+        {t.mostrar.pago && <PagoSection />}
         <Faq />
       </main>
-      <TallerFooter />
-    </>
+      <TallerFooter taller={t} />
+    </TallerProvider>
   );
 }

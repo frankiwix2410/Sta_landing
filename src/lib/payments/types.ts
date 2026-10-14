@@ -15,6 +15,8 @@ export type Money = {
 /** Lo que la landing sabe de una reserva antes de cobrarla. */
 export type OrderDraft = {
   reference: string;
+  /** "Taller de …", para los mensajes de WhatsApp. */
+  courseName: string;
   tierId: string;
   tierName: string;
   price: Money | null;

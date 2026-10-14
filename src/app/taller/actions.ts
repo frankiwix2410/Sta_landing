@@ -4,7 +4,9 @@ import { getPaymentProvider, type CheckoutResult, type Money, type OrderDraft } 
 import { saveReservation } from "@/lib/reservations";
 import { savePaymentProof, sniffProof, type ProofFile } from "@/lib/reservations/payment-proofs";
 import { PROOF_MAX_BYTES, type PaymentKind } from "@/lib/reservations/types";
-import { defaultTier, taller, tallerWaLink } from "@/lib/taller";
+import { tallerWaLink } from "@/lib/taller";
+import { cargarTallerPublico } from "@/lib/talleres/publico";
+import { nombreCurso, tarifaPorDefecto, type TallerVista } from "@/lib/talleres/vista";
 
 export type ReserveState =
   | { status: "idle" }
@@ -24,11 +26,33 @@ function newReference() {
   return `STA-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
 }
 
-/** Importe del catálogo del servidor; `null` mientras no haya precios publicados. */
-function currentPrice(): Money | null {
-  return taller.pricing.published
-    ? { amount: defaultTier.amount, currency: taller.pricing.currency }
+/** Importe de la tarifa por defecto del taller; `null` mientras no haya precios publicados. */
+function currentPrice(t: TallerVista): Money | null {
+  return t.pricing.published
+    ? { amount: tarifaPorDefecto(t).amount, currency: t.pricing.currency }
     : null;
+}
+
+/**
+ * Taller activo leído de la base en el momento del envío. Nunca se confía en lo
+ * que la página tenía cacheado: el estado pudo cambiar desde el admin.
+ */
+async function tallerActivo(): Promise<TallerVista | null> {
+  const publico = await cargarTallerPublico();
+  return publico.kind === "ok" ? publico.vista : null;
+}
+
+function waitlistMessage(t: TallerVista, customer: { name: string; email: string; city: string; profession: string }) {
+  return tallerWaLink(
+    [
+      `Hola, quiero entrar en la lista de espera del ${nombreCurso(t)}.`,
+      "",
+      `Nombre: ${customer.name}`,
+      `Email: ${customer.email}`,
+      `Ciudad: ${customer.city}`,
+      `Profesión: ${customer.profession}`,
+    ].join("\n"),
+  );
 }
 
 /**
@@ -87,60 +111,51 @@ export async function createReservation(
     return { status: "error", errors };
   }
 
-  // Edición cerrada a mano en el catálogo. Se comprueba aquí y no solo en el
-  // formulario porque un server action es un endpoint público: sin esto, una
-  // petición directa seguiría creando reservas de una edición llena.
-  if (taller.soldOut) {
+  const t = await tallerActivo();
+  if (!t) {
     return {
-      status: "sold_out",
-      message: "Se vendieron todos los cupos de esta edición.",
-      handoffUrl: tallerWaLink(
-        [
-          `Hola, quiero entrar en la lista de espera del Taller de ${taller.title} ${taller.titleAccent}.`,
-          "",
-          `Nombre: ${customer.name}`,
-          `Email: ${customer.email}`,
-          `Ciudad: ${customer.city}`,
-          `Profesión: ${customer.profession}`,
-        ].join("\n"),
-      ),
+      status: "error",
+      errors: {},
+      message: "Ahora mismo no hay un taller con inscripciones abiertas. Escríbenos por WhatsApp.",
     };
   }
 
-  // El formulario ya no pregunta la modalidad: toda reserva entra como cupo
-  // general y cualquier tarifa distinta se acuerda al confirmar por WhatsApp.
+  // La página puede estar cacheada: se vuelve a comprobar aquí porque un
+  // server action es un endpoint público.
+  if (!t.mostrar.reserva) {
+    return {
+      status: "sold_out",
+      message:
+        t.estado === "publicado"
+          ? "Los cupos de esta edición se agotaron."
+          : "Se vendieron todos los cupos de esta edición.",
+      handoffUrl: waitlistMessage(t, customer),
+    };
+  }
+
+  const tier = tarifaPorDefecto(t);
   const order: OrderDraft = {
     reference: newReference(),
-    tierId: defaultTier.id,
-    tierName: defaultTier.name,
-    // El precio sale del catálogo del servidor. Mientras no esté confirmado
-    // (`pricing.published === false`) no se cobra ningún importe.
-    price: currentPrice(),
+    courseName: nombreCurso(t),
+    tierId: tier.id,
+    tierName: tier.name,
+    // El precio sale del taller en la base, nunca del formulario.
+    price: currentPrice(t),
     customer,
     notes,
   };
 
-  // Guardar es también reclamar el cupo: si la edición está llena, la reserva
-  // se rechaza aquí y nunca llega a la pasarela.
-  const saved = await saveReservation(order);
+  // Guardar es también reclamar el cupo: la base rechaza si se llenó o se cerró.
+  const saved = await saveReservation(t.slug, order);
 
   if (saved.kind === "sold_out" || saved.kind === "closed") {
-    const closed = saved.kind === "closed";
     return {
       status: "sold_out",
-      message: closed
-        ? "Las reservas de esta edición están cerradas por ahora."
-        : "Los cupos de esta edición se agotaron mientras completabas el formulario.",
-      handoffUrl: tallerWaLink(
-        [
-          `Hola, quiero entrar en la lista de espera del Taller de ${taller.title} ${taller.titleAccent}.`,
-          "",
-          `Nombre: ${customer.name}`,
-          `Email: ${customer.email}`,
-          `Ciudad: ${customer.city}`,
-          `Profesión: ${customer.profession}`,
-        ].join("\n"),
-      ),
+      message:
+        saved.kind === "closed"
+          ? "Las reservas de esta edición están cerradas."
+          : "Los cupos de esta edición se agotaron mientras completabas el formulario.",
+      handoffUrl: waitlistMessage(t, customer),
     };
   }
 
@@ -229,10 +244,24 @@ export async function registerPayment(
     return { status: "error", errors };
   }
 
+  const t = await tallerActivo();
+  if (!t || !t.mostrar.pago) {
+    return {
+      status: "error",
+      errors: {},
+      message:
+        "El registro de pagos de esta edición está cerrado. Envíanos tu comprobante por WhatsApp y lo resolvemos.",
+      handoffUrl: tallerWaLink(
+        `Hola, quiero registrar un pago. Nombre: ${customer.name}. Documento: ${document}.`,
+      ),
+    };
+  }
+  const tier = tarifaPorDefecto(t);
+
   const handoff = (assigned: string | null) =>
     tallerWaLink(
       [
-        `Hola, registré mi ${KIND_LABEL[kind]} del Taller de ${taller.title} ${taller.titleAccent}.`,
+        `Hola, registré mi ${KIND_LABEL[kind]} del ${nombreCurso(t)}.`,
         "",
         ...(assigned ? [`Número de reserva: ${assigned}`] : []),
         `Nombre: ${customer.name}`,
@@ -243,12 +272,13 @@ export async function registerPayment(
     );
 
   const saved = await savePaymentProof({
+    edition: t.slug,
     kind,
     existingReference: reference || null,
     newReference: newReference(),
-    tierId: defaultTier.id,
-    tierName: defaultTier.name,
-    price: currentPrice(),
+    tierId: tier.id,
+    tierName: tier.name,
+    price: currentPrice(t),
     customer: { ...customer, document },
     notes,
     file,

@@ -5,7 +5,7 @@ import { registerPayment, type PaymentState } from "@/app/taller/actions";
 import { Reveal } from "@/components/ui/motion-primitives";
 import { WhatsAppIcon } from "@/components/ui/icons";
 import { PROOF_ACCEPT, PROOF_MAX_BYTES, type PaymentKind } from "@/lib/reservations/types";
-import { taller } from "@/lib/taller";
+import { useTaller } from "@/lib/talleres/contexto";
 
 const initialState: PaymentState = { status: "idle" };
 
@@ -48,6 +48,7 @@ function Field({
 }
 
 export function PagoForm() {
+  const taller = useTaller();
   const [state, formAction, pending] = useActionState(registerPayment, initialState);
   const [kind, setKind] = useState<PaymentKind | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -375,6 +376,7 @@ export function PagoForm() {
 }
 
 export function PagoSection() {
+  const taller = useTaller();
   return (
     <section
       id="registro-pago"

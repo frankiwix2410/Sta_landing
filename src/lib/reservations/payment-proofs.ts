@@ -1,5 +1,4 @@
 import type { Money } from "@/lib/payments";
-import { taller } from "@/lib/taller";
 import { getSupabase } from "./supabase";
 import type { PaymentKind } from "./types";
 
@@ -9,6 +8,8 @@ export const PROOF_BUCKET = "comprobantes";
 export type ProofFile = { bytes: Uint8Array; type: string; ext: string };
 
 export type PaymentProofDraft = {
+  /** Slug del taller al que se registra el pago. */
+  edition: string;
   kind: PaymentKind;
   /** Referencia de una reserva hecha antes. `null` = crear la reserva ahora. */
   existingReference: string | null;
@@ -108,7 +109,7 @@ export async function savePaymentProof(draft: PaymentProofDraft): Promise<SavePr
   }
 
   const proofId = crypto.randomUUID();
-  const path = `${taller.edition}/${proofId}.${draft.file.ext}`;
+  const path = `${draft.edition}/${proofId}.${draft.file.ext}`;
   const bucket = supabase.storage.from(PROOF_BUCKET);
 
   const upload = await bucket.upload(path, draft.file.bytes, {
@@ -122,7 +123,7 @@ export async function savePaymentProof(draft: PaymentProofDraft): Promise<SavePr
   }
 
   const { data, error } = await supabase.rpc("register_payment_proof", {
-    p_edition: taller.edition,
+    p_edition: draft.edition,
     p_proof_id: proofId,
     p_existing_reference: draft.existingReference,
     p_new_reference: draft.newReference,

@@ -1,9 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
-import { taller, tallerWaLink } from "@/lib/taller";
+import { tallerWaLink } from "@/lib/taller";
+import type { TallerVista } from "@/lib/talleres/vista";
 import { site } from "@/lib/site";
 
-export function TallerFooter() {
+export function TallerFooter({ taller }: { taller: TallerVista }) {
   return (
     <footer className="grain relative bg-navy px-5 pt-16 pb-8 text-white sm:px-8 lg:px-16 lg:pt-20">
       <div className="relative mx-auto flex max-w-[1120px] flex-wrap items-start justify-between gap-9">

@@ -6,8 +6,9 @@ import { Reveal } from "@/components/ui/motion-primitives";
 import { WhatsAppIcon } from "@/components/ui/icons";
 // Desde `types` y no desde `@/lib/reservations`: ese barrel arrastra el cliente
 // de Supabase, que no debe entrar en el bundle del navegador.
-import type { Seats } from "@/lib/reservations/types";
-import { taller, tallerWaLink } from "@/lib/taller";
+import { tallerWaLink } from "@/lib/taller";
+import { useTaller } from "@/lib/talleres/contexto";
+import { nombreCurso, type TallerVista } from "@/lib/talleres/vista";
 
 const initialState: ReserveState = { status: "idle" };
 
@@ -17,10 +18,8 @@ const initialState: ReserveState = { status: "idle" };
  */
 const LOW_SEATS = 8;
 
-function waitlistLink() {
-  return tallerWaLink(
-    `Hola, quiero entrar en la lista de espera del Taller de ${taller.title} ${taller.titleAccent}.`,
-  );
+function waitlistLink(taller: TallerVista) {
+  return tallerWaLink(`Hola, quiero entrar en la lista de espera del ${nombreCurso(taller)}.`);
 }
 
 const inputClass =
@@ -79,7 +78,9 @@ function SoldOutPanel({ message, handoffUrl }: { message: string; handoffUrl: st
   );
 }
 
-export function ReservaForm({ seats }: { seats: Seats | null }) {
+export function ReservaForm() {
+  const taller = useTaller();
+  const seats = taller.seats;
   const [state, formAction, pending] = useActionState(createReservation, initialState);
 
   const errors = state.status === "error" ? state.errors : {};
@@ -94,7 +95,7 @@ export function ReservaForm({ seats }: { seats: Seats | null }) {
     return (
       <SoldOutPanel
         message="Se vendieron todos los cupos de esta edición."
-        handoffUrl={waitlistLink()}
+        handoffUrl={waitlistLink(taller)}
       />
     );
   }
@@ -102,15 +103,11 @@ export function ReservaForm({ seats }: { seats: Seats | null }) {
   // `seats` puede venir de una página cacheada, así que este cierre es solo
   // cosmético: quien llegue con la página vieja igual recibe el panel de
   // agotados al enviar, porque el conteo real se hace en la base de datos.
-  if (seats && (!seats.isOpen || seats.remaining <= 0)) {
+  if (seats && seats.libres <= 0) {
     return (
       <SoldOutPanel
-        message={
-          seats.isOpen
-            ? "Se agotaron las plazas de esta edición."
-            : "Las reservas de esta edición están cerradas por ahora."
-        }
-        handoffUrl={waitlistLink()}
+        message="Se agotaron las plazas de esta edición."
+        handoffUrl={waitlistLink(taller)}
       />
     );
   }
@@ -261,8 +258,8 @@ export function ReservaForm({ seats }: { seats: Seats | null }) {
       </button>
 
       <p className="text-center text-[11.5px] text-ink-soft">
-        {seats && seats.remaining <= LOW_SEATS
-          ? `Quedan ${seats.remaining} ${seats.remaining === 1 ? "cupo" : "cupos"}. `
+        {seats && seats.libres <= LOW_SEATS
+          ? `Quedan ${seats.libres} ${seats.libres === 1 ? "cupo" : "cupos"}. `
           : "Cupos limitados. "}
         {taller.pricing.published
           ? "Recibirás tu referencia de pago al enviar."
@@ -272,12 +269,13 @@ export function ReservaForm({ seats }: { seats: Seats | null }) {
   );
 }
 
-export function ReservaSection({ seats = null }: { seats?: Seats | null }) {
-  // Con Supabase conectado el dato es real; sin él se cae al texto fijo del
-  // catálogo, que es lo que había antes de tener base de datos.
+export function ReservaSection() {
+  const taller = useTaller();
+  const seats = taller.seats;
+  // Con Supabase conectado el dato es real; sin él se cae al texto de escasez.
   const scarcity =
-    !taller.soldOut && seats && seats.isOpen && seats.remaining > 0 && seats.remaining <= LOW_SEATS
-      ? `Quedan ${seats.remaining} de ${seats.total} cupos`
+    !taller.soldOut && seats && seats.libres > 0 && seats.libres <= LOW_SEATS
+      ? `Quedan ${seats.libres} de ${seats.total} cupos`
       : `${taller.scarcity.value} ${taller.scarcity.label}`;
 
   return (
@@ -330,7 +328,7 @@ export function ReservaSection({ seats = null }: { seats?: Seats | null }) {
         </div>
 
         <Reveal delay={0.15}>
-          <ReservaForm seats={seats} />
+          <ReservaForm />
         </Reveal>
       </div>
     </section>
