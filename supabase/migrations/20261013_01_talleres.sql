@@ -123,7 +123,9 @@ begin
   ) then
     update public.talleres
        set estado = case when is_open then 'publicado'::public.taller_estado
-                         else 'cerrado'::public.taller_estado end;
+                         else 'finalizado'::public.taller_estado end;
+    -- Las filas antiguas cerradas pasan a 'finalizado' y no a 'cerrado' para que
+    -- no cuenten como activas en la restricción de solapamiento.
     -- Decisión del dueño: la edición de octubre 2026 se trata como terminada
     -- (taller de prueba para certificados).
     update public.talleres set estado = 'finalizado' where slug = 'taller-2026-10';
@@ -132,7 +134,8 @@ begin
 end
 $$;
 
--- Datos de la edición existente que antes vivían en `src/lib/taller.ts`.
+-- Datos de la edición existente que antes vivían en `src/lib/taller.ts`. Solo
+-- la primera vez (fecha_inicio nula): luego no pisa lo que se edite en el admin.
 update public.talleres
    set titulo             = coalesce(titulo, 'Anestesia Regional Ecoguiada'),
        titulo_acento      = coalesce(titulo_acento, '+ Sedación TCI'),
@@ -152,7 +155,8 @@ update public.talleres
          '[{"id":"general","nombre":"Cupo General","descripcion":"Acceso completo a los 7 módulos, prácticas y certificado.","precio":0,"destacada":true},
            {"id":"residente","nombre":"Residente / Estudiante","descripcion":"Tarifa especial. Requiere certificado de residencia vigente.","precio":0,"destacada":false}]'::jsonb
          else tarifas end
- where slug = 'taller-2026-10';
+ where slug = 'taller-2026-10'
+   and fecha_inicio is null;
 
 -- Cualquier otra fila antigua: valores mínimos para poder exigir NOT NULL.
 update public.talleres
@@ -162,7 +166,9 @@ update public.talleres
        fechas_texto = coalesce(fechas_texto, ''),
        sede_nombre  = coalesce(sede_nombre, ''),
        ciudad       = coalesce(ciudad, ''),
-       pais         = coalesce(pais, '');
+       pais         = coalesce(pais, '')
+ where titulo is null or fecha_inicio is null or fecha_fin is null
+    or fechas_texto is null or sede_nombre is null or ciudad is null or pais is null;
 
 alter table public.talleres
   alter column titulo       set not null,
@@ -229,6 +235,23 @@ with (security_invoker = on) as
   from public.talleres t
   left join public.reservations r on r.edition = t.slug
   group by t.id, t.slug, t.cupos_total;
+
+-- Vista de COMPATIBILIDAD: el código desplegado aún lee `taller_availability`
+-- con las columnas antiguas. Existe solo hasta desplegar el código nuevo y se
+-- eliminará en la etapa 2.
+create or replace view public.taller_availability
+with (security_invoker = on) as
+  select
+    t.slug,
+    t.nombre as name,
+    t.cupos_total as total_seats,
+    (t.estado = 'publicado'
+       and t.fecha_fin >= (now() at time zone 'America/Caracas')::date) as is_open,
+    (count(r.id) filter (where r.status <> 'cancelled'))::integer as taken,
+    greatest(t.cupos_total - (count(r.id) filter (where r.status <> 'cancelled')), 0)::integer as remaining
+  from public.talleres t
+  left join public.reservations r on r.edition = t.slug
+  group by t.slug, t.nombre, t.cupos_total, t.estado, t.fecha_fin;
 
 create or replace view public.taller_certificates
 with (security_invoker = on) as

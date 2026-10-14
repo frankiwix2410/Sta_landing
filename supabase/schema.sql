@@ -2,7 +2,8 @@
 -- Reservas del taller — esquema Supabase
 --
 -- Cómo aplicarlo: Supabase → SQL Editor → pegar este archivo → Run.
--- Es idempotente: se puede volver a ejecutar sin romper nada.
+-- Es idempotente solo ANTES de la migración 20261013_01: una vez que existe
+-- `public.talleres`, este archivo se niega a ejecutarse (ver el guard de abajo).
 --
 -- Después de este archivo se aplican, en orden, los de `supabase/migrations/`.
 -- Este archivo describe el esquema inicial; las migraciones lo transforman
@@ -14,6 +15,16 @@
 -- SUPABASE_SERVICE_ROLE_KEY) puede leer y escribir. La landing nunca habla con
 -- Supabase desde el navegador.
 -- ---------------------------------------------------------------------------
+
+-- Guard: tras la migración, volver a correr este archivo recrearía una
+-- `taller_editions` vacía y devolvería las funciones a la versión antigua.
+do $$
+begin
+  if to_regclass('public.talleres') is not null then
+    raise exception 'schema.sql ya fue migrado: aplica solo supabase/migrations/';
+  end if;
+end
+$$;
 
 -- Estado de la reserva como ENUM y no como texto con CHECK: el Table Editor de
 -- Supabase pinta los ENUM como desplegable, así que confirmar un pago es elegir

@@ -6,7 +6,8 @@
 #   SUPABASE_DB_URL='postgresql://postgres:TU_CLAVE@HOST:5432/postgres' ./scripts/migrar.sh
 #
 # Dónde sacar la URL: Supabase → Project Settings → Database → Connection string
-# → pestaña URI. Sirve el "session pooler" o la conexión directa; sustituye
+# → pestaña URI. Recomendado: el "Session pooler" (los hosts de conexión directa
+# son solo IPv6 y suelen fallar desde Docker en macOS). Sustituye
 # [YOUR-PASSWORD] por la contraseña de la base de datos.
 #
 # Usa `psql` si está instalado; si no, Docker (imagen postgres:16).
