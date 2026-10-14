@@ -9,19 +9,7 @@
  * Los datos provienen de los flyers oficiales del evento (julio 2026).
  */
 
-export const taller = {
-  /**
-   * Identifica esta convocatoria en la base de datos: es la fila de
-   * `talleres` contra la que se cuentan los cupos. Al programar una
-   * edición nueva, crea la fila en Supabase y cambia este valor — así las
-   * reservas viejas no consumen plazas de la nueva.
-   */
-  edition: "taller-2026-10",
-
-  title: "Anestesia Regional Ecoguiada",
-  titleAccent: "+ Sedación TCI",
-  kind: "Taller presencial",
-
+const contenido = {
   /**
    * Foto grande del hero. Es distinta a la del instructor a propósito: la
    * misma imagen dos veces en la misma página se lee como plantilla.
@@ -49,43 +37,6 @@ export const taller = {
       "Miembro de la junta directiva SARG – SCARE",
     ],
   },
-
-  venue: {
-    name: "Policlínico San Francisco",
-    city: "Maracaibo",
-    region: "Zulia",
-    country: "Venezuela",
-  },
-
-  /** Fechas del taller. `iso` alimenta el JSON-LD; `label` es lo que se lee en pantalla. */
-  dates: {
-    label: "Octubre 24 y 25, 2026",
-    short: "24–25 OCT 2026",
-    startIso: "2026-10-24T08:00:00-04:00",
-    endIso: "2026-10-25T17:00:00-04:00",
-  },
-
-  endorsement: "Avalado por SCARE – SARG",
-
-  /**
-   * Escasez que se anuncia en el hero y encima del formulario. `value` va en
-   * grande y `label` debajo; juntos forman la frase "100% de cupos vendidos".
-   */
-  scarcity: {
-    value: "100%",
-    label: "de cupos vendidos",
-  },
-
-  /**
-   * Edición llena: en vez del formulario de reserva se muestra el panel de
-   * cupos agotados con el botón de lista de espera, y el servidor rechaza
-   * cualquier reserva nueva. El registro de pago sigue abierto, porque quien
-   * ya reservó todavía tiene que subir su comprobante.
-   *
-   * Cuando abras cupos otra vez (o programes una edición nueva), pon `false`
-   * y ajusta `scarcity`.
-   */
-  soldOut: true,
 
   /**
    * Galería de la página del taller. Fotos propias del equipo: si se
@@ -151,36 +102,6 @@ export const taller = {
   ],
 
   /**
-   * PRECIOS — TODO: confirmar antes de publicar.
-   *
-   * `published: false` hace que la página NO muestre ninguna cifra y que el
-   * formulario funcione como reserva (el precio se informa al confirmar).
-   * Cuando tengas los valores reales: corrige cada `amount`, ajusta
-   * `currency` y pon `published: true`.
-   */
-  pricing: {
-    published: false,
-    currency: "COP" as const,
-    /** Importes en la unidad menor de la moneda (COP no usa decimales: 1 = $1). */
-    tiers: [
-      {
-        id: "general",
-        name: "Cupo General",
-        desc: "Acceso completo a los 7 módulos, prácticas y certificado.",
-        amount: 0, // TODO: precio real
-        featured: true,
-      },
-      {
-        id: "residente",
-        name: "Residente / Estudiante",
-        desc: "Tarifa especial. Requiere certificado de residencia vigente.",
-        amount: 0, // TODO: precio real
-        featured: false,
-      },
-    ],
-  },
-
-  /**
    * Condición del abono. Se muestra junto al registro de pago y en el
    * formulario, donde hay que aceptarla para registrar un abono.
    */
@@ -213,32 +134,11 @@ export const taller = {
   ],
 } as const;
 
-/** Lo que comparten todas las ediciones. Ver comentario de cabecera. */
-export const contenidoTaller = {
-  heroPhoto: taller.heroPhoto,
-  instructor: taller.instructor,
-  gallery: taller.gallery,
-  contact: taller.contact,
-  modules: taller.modules,
-  highlights: taller.highlights,
-  payment: taller.payment,
-  faq: taller.faq,
-} as const;
+export const contenidoTaller = contenido;
 
 export type ContenidoTaller = typeof contenidoTaller;
 
-export type TallerTier = (typeof taller.pricing.tiers)[number];
-
-/**
- * Modalidad con la que se registra toda reserva.
- *
- * El formulario ya no pregunta la modalidad, así que `tiers` queda solo como
- * catálogo interno: la tarifa de residente sigue existiendo para acordarla a
- * mano al confirmar, pero nadie la elige desde la web.
- */
-export const defaultTier: TallerTier = taller.pricing.tiers[0];
-
-/** Formatea un importe de `pricing.tiers` para mostrarlo en pantalla. */
+/** Formatea un importe en la moneda indicada para mostrarlo en pantalla. */
 export function formatPrice(amount: number, currency: string) {
   return new Intl.NumberFormat("es-CO", {
     style: "currency",
@@ -248,5 +148,5 @@ export function formatPrice(amount: number, currency: string) {
 }
 
 export function tallerWaLink(text: string) {
-  return `https://wa.me/${taller.contact.whatsapp}?text=${encodeURIComponent(text)}`;
+  return `https://wa.me/${contenido.contact.whatsapp}?text=${encodeURIComponent(text)}`;
 }
