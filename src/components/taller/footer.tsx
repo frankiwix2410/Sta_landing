@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { tallerWaLink } from "@/lib/taller";
-import type { TallerVista } from "@/lib/talleres/vista";
+import { nombreCurso, type TallerVista } from "@/lib/talleres/vista";
 import { site } from "@/lib/site";
 
 export function TallerFooter({ taller }: { taller: TallerVista }) {
@@ -20,7 +20,7 @@ export function TallerFooter({ taller }: { taller: TallerVista }) {
             className="h-[72px] w-auto sm:h-[88px]"
           />
           <p className="mt-3.5 text-[13px] leading-[1.7] text-ice/55">
-            Taller de {taller.title} {taller.titleAccent} · {taller.dates.label} ·{" "}
+            {nombreCurso(taller)} · {taller.dates.label} ·{" "}
             {taller.venue.name}, {taller.venue.city}.
           </p>
         </div>
@@ -41,18 +41,22 @@ export function TallerFooter({ taller }: { taller: TallerVista }) {
               >
                 Instructor
               </a>
-              <a
-                href="#reservar"
-                className="text-[13.5px] text-white/80 transition-colors hover:text-white"
-              >
-                Reservar cupo
-              </a>
-              <a
-                href="#registro-pago"
-                className="text-[13.5px] text-white/80 transition-colors hover:text-white"
-              >
-                Registrar pago
-              </a>
+              {(taller.mostrar.reserva || taller.mostrar.listaEspera) && (
+                <a
+                  href="#reservar"
+                  className="text-[13.5px] text-white/80 transition-colors hover:text-white"
+                >
+                  {taller.mostrar.reserva ? "Reservar cupo" : "Lista de espera"}
+                </a>
+              )}
+              {taller.mostrar.pago && (
+                <a
+                  href="#registro-pago"
+                  className="text-[13.5px] text-white/80 transition-colors hover:text-white"
+                >
+                  Registrar pago
+                </a>
+              )}
               <Link
                 href="/"
                 className="text-[13.5px] text-white/80 transition-colors hover:text-white"
@@ -66,7 +70,7 @@ export function TallerFooter({ taller }: { taller: TallerVista }) {
             <h4 className="mb-4 text-[13px] tracking-[0.1em] text-sky uppercase">Informes</h4>
             <div className="flex flex-col gap-2.5">
               <a
-                href={tallerWaLink(`Hola, quiero información del Taller de ${taller.title}.`)}
+                href={tallerWaLink(`Hola, quiero información del ${nombreCurso(taller)}.`)}
                 target="_blank"
                 rel="noopener"
                 className="text-[13.5px] text-white/80 transition-colors hover:text-white"
@@ -96,7 +100,7 @@ export function TallerFooter({ taller }: { taller: TallerVista }) {
         <span className="text-xs text-ice/45">
           © {new Date().getFullYear()} {site.doctor} · {site.brand}
         </span>
-        <span className="text-xs text-ice/45">{taller.endorsement}</span>
+        {taller.endorsement && <span className="text-xs text-ice/45">{taller.endorsement}</span>}
       </div>
     </footer>
   );

@@ -122,6 +122,10 @@ export async function createReservation(
 
   // La página puede estar cacheada: se vuelve a comprobar aquí porque un
   // server action es un endpoint público.
+  if (t.estado === "finalizado") {
+    return { status: "error", errors: {}, message: "Esta edición ya finalizó." };
+  }
+
   if (!t.mostrar.reserva) {
     return {
       status: "sold_out",

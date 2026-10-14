@@ -5,6 +5,7 @@ import { LineDraw, Reveal, WordsReveal } from "@/components/ui/motion-primitives
 import { InstagramIcon, WhatsAppIcon } from "@/components/ui/icons";
 import { tallerWaLink } from "@/lib/taller";
 import { useTaller } from "@/lib/talleres/contexto";
+import { nombreCurso } from "@/lib/talleres/vista";
 
 /* -------------------------------------------------------------- Contenido */
 export function Contenido() {
@@ -169,12 +170,14 @@ export function Instructor() {
             ))}
           </ul>
 
-          <Reveal delay={0.45}>
-            <p className="mt-9 inline-flex items-center gap-2.5 rounded-full border border-white/25 px-5 py-2.5 text-[13px] font-semibold text-white">
-              <span className="block size-1.5 rounded-full bg-sky" />
-              {taller.endorsement}
-            </p>
-          </Reveal>
+          {taller.endorsement && (
+            <Reveal delay={0.45}>
+              <p className="mt-9 inline-flex items-center gap-2.5 rounded-full border border-white/25 px-5 py-2.5 text-[13px] font-semibold text-white">
+                <span className="block size-1.5 rounded-full bg-sky" />
+                {taller.endorsement}
+              </p>
+            </Reveal>
+          )}
         </div>
       </div>
     </section>
@@ -200,7 +203,7 @@ export function Faq() {
             <div className="mt-7 flex flex-col gap-2.5">
               <a
                 href={tallerWaLink(
-                  `Hola, tengo una pregunta sobre el Taller de ${taller.title} ${taller.titleAccent}.`,
+                  `Hola, tengo una pregunta sobre el ${nombreCurso(taller)}.`,
                 )}
                 target="_blank"
                 rel="noopener"

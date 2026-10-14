@@ -7,6 +7,7 @@ import { PagoSection } from "@/components/taller/pago-form";
 import { ProximaEdicion } from "@/components/taller/proxima-edicion";
 import { ReservaSection } from "@/components/taller/reserva-form";
 import { Contenido, Faq, Galeria, Instructor } from "@/components/taller/sections";
+import { supabaseConfigured } from "@/lib/reservations/supabase";
 import { TallerProvider } from "@/lib/talleres/contexto";
 import { cargarTallerPublico } from "@/lib/talleres/publico";
 import { nombreCurso, type TallerVista } from "@/lib/talleres/vista";
@@ -18,12 +19,22 @@ import { nombreCurso, type TallerVista } from "@/lib/talleres/vista";
  */
 export const revalidate = 300;
 
+/**
+ * Con Supabase configurado, `sin_conexion` es un fallo transitorio: lanzar hace
+ * que ISR conserve la última página buena en vez de cachear "Próxima edición"
+ * durante 5 minutos. Sin Supabase (desarrollo) sí se muestra la página vacía.
+ */
+function falloDeLectura(): never {
+  throw new Error("[taller] no se pudo leer el taller activo");
+}
+
 function descripcion(t: TallerVista) {
   return `${t.dates.label} · ${t.venue.name}, ${t.venue.city}. ${t.kind} con ${t.instructor.name}: anestesia regional ecoguiada, accesos vasculares y sedación TCI.${t.endorsement ? ` ${t.endorsement}.` : ""}`;
 }
 
 export async function generateMetadata(): Promise<Metadata> {
   const publico = await cargarTallerPublico();
+  if (publico.kind === "sin_conexion" && supabaseConfigured) falloDeLectura();
   if (publico.kind !== "ok") {
     return { title: "Taller · Próxima edición", robots: { index: true, follow: true } };
   }
@@ -74,6 +85,7 @@ function jsonLd(t: TallerVista) {
 
 export default async function TallerPage() {
   const publico = await cargarTallerPublico();
+  if (publico.kind === "sin_conexion" && supabaseConfigured) falloDeLectura();
   if (publico.kind !== "ok") return <ProximaEdicion />;
 
   const t = publico.vista;
