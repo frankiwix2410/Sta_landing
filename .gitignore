@@ -47,3 +47,6 @@ supabase/.temp/
 # el repositorio ni en el servidor. Las versiones optimizadas viven en
 # public/assets/*.webp.
 fotos-originales/taller-2026-09/
+
+# Copias de la base: contienen datos personales, nunca al repositorio.
+backups/
