@@ -1,5 +1,6 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
+import { notFound } from "next/navigation";
 
 /**
  * Puerta de la zona de administración de certificados.
@@ -63,4 +64,13 @@ export async function signIn(submitted: string) {
 
 export async function signOut() {
   (await cookies()).delete({ name: COOKIE, path: "/admin" });
+}
+
+/**
+ * Para páginas del admin: responde 404 si no hay contraseña configurada y
+ * devuelve si hay sesión. Cada página decide qué pintar sin sesión (el login).
+ */
+export async function puertaAdmin(): Promise<boolean> {
+  if (!adminConfigured()) notFound();
+  return isAdmin();
 }

@@ -21,6 +21,11 @@ export type Certificate = {
   /** Horas académicas. `null` = el certificado no las menciona. */
   hours: number | null;
   endorsement: string | null;
+  venueCity: string | null;
+  venueRegion: string | null;
+  signatureName: string | null;
+  signatureTitle: string | null;
+  signatureDocument: string | null;
 };
 
 type CertificateRow = {
@@ -34,10 +39,15 @@ type CertificateRow = {
   dates_label: string | null;
   hours: number | null;
   endorsement: string | null;
+  venue_city: string | null;
+  venue_region: string | null;
+  signature_name: string | null;
+  signature_title: string | null;
+  signature_document: string | null;
 };
 
 const COLUMNS =
-  "reference, name, email, profession, city, edition, course_title, dates_label, hours, endorsement";
+  "reference, name, email, profession, city, edition, course_title, dates_label, hours, endorsement, venue_city, venue_region, signature_name, signature_title, signature_document";
 
 function toCertificate(row: CertificateRow): Certificate {
   return {
@@ -51,6 +61,11 @@ function toCertificate(row: CertificateRow): Certificate {
     datesLabel: row.dates_label,
     hours: row.hours,
     endorsement: row.endorsement,
+    venueCity: row.venue_city,
+    venueRegion: row.venue_region,
+    signatureName: row.signature_name,
+    signatureTitle: row.signature_title,
+    signatureDocument: row.signature_document,
   };
 }
 

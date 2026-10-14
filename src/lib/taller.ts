@@ -12,7 +12,7 @@
 export const taller = {
   /**
    * Identifica esta convocatoria en la base de datos: es la fila de
-   * `taller_editions` contra la que se cuentan los cupos. Al programar una
+   * `talleres` contra la que se cuentan los cupos. Al programar una
    * edición nueva, crea la fila en Supabase y cambia este valor — así las
    * reservas viejas no consumen plazas de la nueva.
    */

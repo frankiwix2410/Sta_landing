@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { CertificateSheet } from "@/components/certificado/sheet";
 import { PrintButton } from "@/components/certificado/print-button";
 import { getCertificate } from "@/lib/reservations/certificates";
-import { taller, tallerWaLink } from "@/lib/taller";
+import { tallerWaLink } from "@/lib/taller";
 
 // El certificado se comprueba contra la base en cada visita: si se revoca una
 // asistencia, el enlace tiene que dejar de acreditar nada de inmediato.
@@ -22,9 +22,7 @@ function Notice({ title, children }: { title: string; children: React.ReactNode 
         <h1 className="text-[clamp(26px,4vw,38px)] leading-[1.15] text-navy">{title}</h1>
         <div className="mt-5 text-[15px] leading-[1.8] text-ink">{children}</div>
         <a
-          href={tallerWaLink(
-            `Hola, tengo una duda con mi certificado del Taller de ${taller.title} ${taller.titleAccent}.`,
-          )}
+          href={tallerWaLink("Hola, tengo una duda con mi certificado del taller.")}
           target="_blank"
           rel="noopener"
           className="mt-8 inline-flex cursor-pointer items-center rounded-full bg-navy px-6 py-3.5 text-[14px] font-semibold text-white transition-colors duration-200 hover:bg-azure"

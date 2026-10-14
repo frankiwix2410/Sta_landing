@@ -3,7 +3,7 @@ import QRCode from "qrcode";
 import "./sheet.css";
 import type { Certificate } from "@/lib/reservations/certificates";
 import { site } from "@/lib/site";
-import { taller } from "@/lib/taller";
+import { contenidoTaller } from "@/lib/taller";
 
 /**
  * Una hoja de certificado, A4 apaisado.
@@ -25,7 +25,15 @@ export async function CertificateSheet({
   const course = splitCourse(courseTitle);
   const url = siteUrl();
   const qr = url ? await qrSvg(url) : null;
-  const { signature } = taller.instructor;
+  // La firma y la sede salen del taller en la base; el contenido por defecto
+  // solo cubre talleres anteriores a que existieran esos campos.
+  const fallback = contenidoTaller.instructor.signature;
+  const signature = {
+    name: certificate.signatureName ?? fallback.name,
+    title: certificate.signatureTitle ?? fallback.title,
+    document: certificate.signatureDocument ?? fallback.document,
+  };
+  const lugar = [certificate.venueCity, certificate.venueRegion].filter(Boolean).join(", ");
 
   return (
     <article className="cert-sheet relative h-[210mm] w-[297mm] overflow-hidden bg-white font-sans text-navy">
@@ -137,7 +145,7 @@ export async function CertificateSheet({
         <div className="mt-[4mm] flex items-center rounded-[2.5mm] border-[0.35mm] border-navy/40 px-[6mm] py-[2.2mm] text-[3.1mm] font-medium tracking-[0.1em] text-navy uppercase">
           <span className="flex items-center gap-x-[2.5mm]">
             <PinIcon />
-            {taller.venue.city}, {taller.venue.region}
+            {lugar}
           </span>
           {datesLabel ? (
             <>

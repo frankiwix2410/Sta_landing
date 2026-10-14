@@ -11,11 +11,11 @@ export async function login(_prev: LoginState, formData: FormData): Promise<Logi
 
   if (!ok) return { error: "Contraseña incorrecta." };
 
-  revalidatePath("/admin/certificados");
+  revalidatePath("/admin", "layout");
   return {};
 }
 
 export async function logout() {
   await signOut();
-  revalidatePath("/admin/certificados");
+  revalidatePath("/admin", "layout");
 }

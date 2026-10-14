@@ -3,9 +3,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CertificateSheet } from "@/components/certificado/sheet";
 import { PrintButton } from "@/components/certificado/print-button";
-import { adminConfigured, isAdmin } from "@/lib/admin-auth";
+import { puertaAdmin } from "@/lib/admin-auth";
 import { listCertificates } from "@/lib/reservations/certificates";
-import { taller } from "@/lib/taller";
+import { slugParaAdmin } from "@/lib/talleres/publico";
 
 export const dynamic = "force-dynamic";
 
@@ -20,11 +20,15 @@ export const metadata: Metadata = {
  * Al imprimir sale un único PDF con tantas páginas como asistentes: el salto lo
  * pone la regla `break-after: page` de `sheet.css`.
  */
-export default async function ImprimirPage() {
-  if (!adminConfigured()) notFound();
-  if (!(await isAdmin())) notFound();
+export default async function ImprimirPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ taller?: string }>;
+}) {
+  if (!(await puertaAdmin())) notFound();
 
-  const certificates = await listCertificates(taller.edition);
+  const slug = await slugParaAdmin((await searchParams).taller);
+  const certificates = slug ? await listCertificates(slug) : null;
 
   if (!certificates?.length) {
     return (
@@ -32,7 +36,7 @@ export default async function ImprimirPage() {
         <div className="text-center">
           <p className="text-[15px] text-ink">No hay certificados que imprimir.</p>
           <Link
-            href="/admin/certificados"
+            href={slug ? `/admin/certificados?taller=${slug}` : "/admin/certificados"}
             className="mt-5 inline-block text-[14px] font-semibold text-azure underline-offset-4 hover:underline"
           >
             Volver
@@ -55,7 +59,7 @@ export default async function ImprimirPage() {
         </div>
         <div className="flex items-center gap-3">
           <Link
-            href="/admin/certificados"
+            href={slug ? `/admin/certificados?taller=${slug}` : "/admin/certificados"}
             className="text-[14px] font-semibold text-azure underline-offset-4 hover:underline"
           >
             Volver

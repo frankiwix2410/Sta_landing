@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { adminConfigured, isAdmin } from "@/lib/admin-auth";
+import { AdminShell } from "@/components/admin/shell";
+import { LoginScreen } from "@/components/admin/login-screen";
+import { puertaAdmin } from "@/lib/admin-auth";
 import { listCertificates } from "@/lib/reservations/certificates";
-import { taller } from "@/lib/taller";
-import { logout } from "./actions";
-import { LoginForm } from "./login-form";
+import { slugParaAdmin } from "@/lib/talleres/publico";
 
 export const dynamic = "force-dynamic";
 
@@ -14,47 +13,35 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function CertificadosAdminPage() {
-  // Sin contraseña configurada la ruta no existe: mejor un 404 que una lista de
-  // asistentes accesible a cualquiera que adivine la URL.
-  if (!adminConfigured()) notFound();
+export default async function CertificadosAdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ taller?: string }>;
+}) {
+  if (!(await puertaAdmin())) return <LoginScreen />;
 
-  if (!(await isAdmin())) {
+  const slug = await slugParaAdmin((await searchParams).taller);
+  if (!slug) {
     return (
-      <main className="grid min-h-[100svh] place-items-center bg-cream px-5 py-16">
-        <div className="w-full max-w-[360px]">
-          <h1 className="text-[28px] leading-tight text-navy">Certificados</h1>
-          <p className="mt-2 mb-7 text-[14px] leading-relaxed text-ink-soft">
-            Zona privada del taller.
-          </p>
-          <LoginForm />
-        </div>
-      </main>
+      <AdminShell titulo="Certificados">
+        <p className="rounded-2xl bg-white p-6 text-[14.5px] text-ink">
+          No hay ningún taller visible. Elige uno desde Talleres.
+        </p>
+      </AdminShell>
     );
   }
 
-  const certificates = await listCertificates(taller.edition);
+  const certificates = await listCertificates(slug);
 
   return (
-    <main className="min-h-[100svh] bg-cream px-5 py-14 sm:px-8">
-      <div className="mx-auto max-w-[900px]">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-[30px] leading-tight text-navy">Certificados</h1>
-            <p className="mt-1.5 text-[14px] text-ink-soft">
-              Edición <span className="font-mono text-[13px]">{taller.edition}</span>
-            </p>
-          </div>
-          <form action={logout}>
-            <button
-              type="submit"
-              className="cursor-pointer rounded-full border border-navy/20 px-5 py-2.5 text-[13px] font-semibold text-navy transition-colors duration-200 hover:border-navy/50"
-            >
-              Salir
-            </button>
-          </form>
-        </div>
-
+    <AdminShell
+      titulo="Certificados"
+      subtitulo={
+        <>
+          Edición <span className="font-mono text-[13px]">{slug}</span>
+        </>
+      }
+    >
         {certificates === null ? (
           <p className="mt-10 rounded-2xl bg-white p-6 text-[14.5px] leading-relaxed text-ink">
             No se pudo consultar la base de datos. Revisa que{" "}
@@ -72,7 +59,7 @@ export default async function CertificadosAdminPage() {
           <>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link
-                href="/admin/certificados/imprimir"
+                href={`/admin/certificados/imprimir?taller=${slug}`}
                 className="inline-flex cursor-pointer items-center rounded-full bg-navy px-6 py-3 text-[14px] font-semibold text-white transition-colors duration-200 hover:bg-azure"
               >
                 Imprimir los {certificates.length} en un PDF
@@ -105,7 +92,6 @@ export default async function CertificadosAdminPage() {
             </ul>
           </>
         )}
-      </div>
-    </main>
+    </AdminShell>
   );
 }
