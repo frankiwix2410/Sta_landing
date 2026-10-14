@@ -1,6 +1,10 @@
 /**
- * Datos del taller. Todo lo editable de la landing `/taller` vive aquí:
- * fechas, sede, contenido, contactos y precios.
+ * Contenido por defecto de la página del taller: lo que no cambia entre
+ * ediciones (instructor, módulos, galería, FAQ, contactos).
+ *
+ * Lo operativo —título, fechas, sede, cupos, precios, estado— vive en la
+ * tabla `talleres` y se edita desde /admin. Si un taller trae su propio
+ * `contenido` en la base, este queda como respaldo.
  *
  * Los datos provienen de los flyers oficiales del evento (julio 2026).
  */
@@ -209,6 +213,20 @@ export const taller = {
   ],
 } as const;
 
+/** Lo que comparten todas las ediciones. Ver comentario de cabecera. */
+export const contenidoTaller = {
+  heroPhoto: taller.heroPhoto,
+  instructor: taller.instructor,
+  gallery: taller.gallery,
+  contact: taller.contact,
+  modules: taller.modules,
+  highlights: taller.highlights,
+  payment: taller.payment,
+  faq: taller.faq,
+} as const;
+
+export type ContenidoTaller = typeof contenidoTaller;
+
 export type TallerTier = (typeof taller.pricing.tiers)[number];
 
 /**
@@ -221,7 +239,7 @@ export type TallerTier = (typeof taller.pricing.tiers)[number];
 export const defaultTier: TallerTier = taller.pricing.tiers[0];
 
 /** Formatea un importe de `pricing.tiers` para mostrarlo en pantalla. */
-export function formatPrice(amount: number, currency: string = taller.pricing.currency) {
+export function formatPrice(amount: number, currency: string) {
   return new Intl.NumberFormat("es-CO", {
     style: "currency",
     currency,
