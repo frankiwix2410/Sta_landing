@@ -74,6 +74,22 @@ describe("leerPersonaForm", () => {
   });
 });
 
+describe("entradas hostiles", () => {
+  it("un email enorme se rechaza sin ejecutar la regex sobre él", () => {
+    const hostil = "a@" + ".".repeat(40000) + "@";
+    const inicio = performance.now();
+    const r = leerPersonaForm(fd({ documento: "12345", nombre: "Ana Pérez", email: hostil }), "admin");
+    const tardo = performance.now() - inicio;
+    expect(r.ok === false && r.errores.email).toBe("Escribe un email válido.");
+    expect(tardo).toBeLessThan(50);
+  });
+
+  it("cualquier campo se recorta a 2000 caracteres", () => {
+    const r = leerPersonaForm(fd({ documento: "12345", nombre: "Ana Pérez", notas: "x".repeat(5000) }), "admin");
+    expect(r.ok === false && r.errores.notas).toBeTruthy();
+  });
+});
+
 describe("leerCorrecciones", () => {
   it("vacío = sin cambios", () => {
     const errores: Record<string, string> = {};

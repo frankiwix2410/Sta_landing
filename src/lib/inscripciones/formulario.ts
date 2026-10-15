@@ -20,9 +20,12 @@ export function esUuid(v: string): boolean {
   return UUID.test(v);
 }
 
+/** Tope duro para cualquier campo: nada llega a una regex sin recortarse antes. */
+const TOPE_CRUDO = 2000;
+
 function texto(fd: FormData, k: string) {
   const v = fd.get(k);
-  return typeof v === "string" ? v.trim() : "";
+  return typeof v === "string" ? v.trim().slice(0, TOPE_CRUDO) : "";
 }
 
 function validarNombre(nombre: string, errores: Record<string, string>) {
@@ -33,13 +36,17 @@ function validarNombre(nombre: string, errores: Record<string, string>) {
 // Validación deliberadamente laxa: rechazar direcciones raras pero válidas es
 // peor que dejar pasar una errata, porque cada pago se confirma a mano.
 function validarEmail(email: string, errores: Record<string, string>) {
-  if (!EMAIL.test(email) || email.length > MAX.email) errores.email = "Escribe un email válido.";
+  // Primero el largo: la regex nunca debe ver un texto sin acotar (ReDoS).
+  if (email.length > MAX.email || !EMAIL.test(email)) errores.email = "Escribe un email válido.";
 }
 
 function validarTelefono(telefono: string, errores: Record<string, string>) {
-  const digitos = telefono.replace(/\D/g, "");
-  if (digitos.length < 7 || digitos.length > 15 || telefono.length > MAX.telefono)
+  if (telefono.length > MAX.telefono) {
     errores.telefono = "Escribe un teléfono válido con indicativo.";
+    return;
+  }
+  const digitos = telefono.replace(/\D/g, "");
+  if (digitos.length < 7 || digitos.length > 15) errores.telefono = "Escribe un teléfono válido con indicativo.";
 }
 
 export type LecturaPersona =
@@ -57,8 +64,8 @@ export function leerPersonaForm(fd: FormData, modo: "publico" | "admin"): Lectur
   const errores: Record<string, string> = {};
 
   const crudo = texto(fd, "documento");
-  const documento = normalizarDocumento(crudo);
-  if (crudo.length > MAX.documento || !documentoValido(documento))
+  const documento = crudo.length > MAX.documento ? "" : normalizarDocumento(crudo);
+  if (!documentoValido(documento))
     errores.documento = "Escribe el número de documento (cédula o pasaporte).";
 
   const tipo = texto(fd, "tipo_documento").toUpperCase();
