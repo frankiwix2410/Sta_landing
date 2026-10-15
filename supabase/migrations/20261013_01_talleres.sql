@@ -206,6 +206,7 @@ $$;
 create or replace function public.tocar_actualizado_en()
 returns trigger
 language plpgsql
+set search_path = ''
 as $$
 begin
   new.actualizado_en := now();
