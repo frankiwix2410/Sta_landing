@@ -4,6 +4,9 @@ import { LoginScreen } from "@/components/admin/login-screen";
 import { TallerForm } from "@/components/admin/taller-form";
 import { puertaAdmin } from "@/lib/admin-auth";
 
+// Sin esto el build (que no tiene CERTIFICADOS_PASSWORD) la congela como 404.
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Nuevo taller · STA",
   robots: { index: false, follow: false },
