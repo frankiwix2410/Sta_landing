@@ -24,6 +24,16 @@ describe("saldoPendiente", () => {
     expect(saldoPendiente(50, 25)).toBe(25);
     expect(saldoPendiente(80, 50)).toBe(0);
   });
+
+  it("NaN, infinitos y negativos cuentan como 0: nunca NaN ni más de 100", () => {
+    expect(saldoPendiente(NaN, 0)).toBe(100);
+    expect(saldoPendiente(-20, 0)).toBe(100);
+    expect(saldoPendiente(50, Infinity)).toBe(50);
+    expect(porcentajesDisponibles([50, 100], NaN, -5)).toEqual([
+      { porcentaje: 50, etiqueta: "Abono del 50%" },
+      { porcentaje: 100, etiqueta: "Pago completo (100%)" },
+    ]);
+  });
 });
 
 describe("porcentajesDisponibles", () => {

@@ -13,7 +13,10 @@ export function estadoPago(i: { cancelada: boolean; porcentajePagado: number }):
  * Es la misma cuenta que hace `registrar_comprobante` en la base.
  */
 export function saldoPendiente(pagado: number, enRevision: number): number {
-  return Math.max(0, 100 - Math.min(100, pagado + enRevision));
+  // NaN, infinitos o negativos (datos corruptos o mal enviados) cuentan como 0:
+  // así nunca se ofrece un "NaN%" ni un porcentaje mayor que el saldo.
+  const seguro = (n: number) => (Number.isFinite(n) && n > 0 ? Math.min(100, n) : 0);
+  return Math.max(0, 100 - Math.min(100, seguro(pagado) + seguro(enRevision)));
 }
 
 export type OpcionPago = { porcentaje: number; etiqueta: string };

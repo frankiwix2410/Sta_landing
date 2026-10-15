@@ -62,8 +62,14 @@ export function enmascararTelefono(telefono: string | null): string {
   return `*** *** **${digitos.slice(-2)}`;
 }
 
-/** "CC ****468", para la página de verificación del certificado. */
+/**
+ * "CC ****468", para la página de verificación del certificado. Con documentos
+ * cortos se muestra menos (o nada): mostrar casi todo daría el dato completo.
+ */
 export function enmascararDocumento(tipo: TipoDocumento, documento: string | null): string {
   if (!documento) return "Por identificar";
-  return `${tipo} ****${documento.slice(-3)}`;
+  const largo = [...documento].length;
+  if (largo < 4) return `${tipo} ****`;
+  const visibles = Math.min(3, Math.floor(largo / 2));
+  return `${tipo} ****${documento.slice(-visibles)}`;
 }

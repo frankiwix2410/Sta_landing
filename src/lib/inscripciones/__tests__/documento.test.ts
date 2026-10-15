@@ -55,4 +55,10 @@ describe("enmascar", () => {
     expect(enmascararDocumento("CC", "1136882468")).toBe("CC ****468");
     expect(enmascararDocumento("CC", null)).toBe("Por identificar");
   });
+
+  it("documento corto: muestra menos o nada, nunca el dato completo", () => {
+    expect(enmascararDocumento("CC", "1234")).toBe("CC ****34");
+    expect(enmascararDocumento("CC", "123")).toBe("CC ****");
+    expect(enmascararDocumento("CC", "12")).toBe("CC ****");
+  });
 });
