@@ -24,17 +24,21 @@ const FILTRO_ESTADO = [
   { valor: "todos", etiqueta: "Todos" },
 ] as const;
 
-type Busqueda = { estado?: string; taller?: string };
+type Busqueda = { estado?: string; taller?: string; inscripcion?: string };
 
 export default async function PagosPage({ searchParams }: { searchParams: Promise<Busqueda> }) {
   if (!(await puertaAdmin())) return <LoginScreen />;
 
   const sp = await searchParams;
-  const estado = FILTRO_ESTADO.find((e) => e.valor === sp.estado)?.valor ?? "pending";
-  const tallerId = sp.taller && esUuid(sp.taller) ? sp.taller : null;
+  // Desde Inscritos se llega con una inscripción: ahí interesan todos sus
+  // comprobantes (también los ya verificados o rechazados).
+  const inscripcionId = typeof sp.inscripcion === "string" && esUuid(sp.inscripcion) ? sp.inscripcion : null;
+  const estado =
+    FILTRO_ESTADO.find((e) => e.valor === sp.estado)?.valor ?? (inscripcionId ? "todos" : "pending");
+  const tallerId = typeof sp.taller === "string" && esUuid(sp.taller) ? sp.taller : null;
   const [talleres, comprobantes] = await Promise.all([
     listarTalleres(),
-    listarComprobantes({ estado, tallerId }),
+    listarComprobantes({ estado, tallerId, inscripcionId }),
   ]);
   const formato = new Intl.DateTimeFormat("es-CO", {
     dateStyle: "medium",
@@ -73,10 +77,29 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
             ))}
           </select>
         </div>
+        {inscripcionId && <input type="hidden" name="inscripcion" value={inscripcionId} />}
         <button type="submit" className={botonSecundario}>
           Filtrar
         </button>
       </form>
+
+      {inscripcionId && (
+        <p className="mb-5 text-[13.5px] text-ink">
+          Mostrando los comprobantes de{" "}
+          {comprobantes?.[0] ? (
+            <>
+              <strong>{comprobantes[0].personaNombre}</strong> ·{" "}
+              <span className="font-mono">{comprobantes[0].referencia}</span>
+            </>
+          ) : (
+            "una inscripción"
+          )}
+          .{" "}
+          <a href="/admin/pagos" className="font-semibold text-azure hover:underline">
+            Ver todos los pagos
+          </a>
+        </p>
+      )}
 
       {comprobantes === null ? (
         <p className={tarjeta}>No se pudo consultar la base de datos.</p>

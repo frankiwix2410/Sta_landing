@@ -87,6 +87,12 @@ export function InscritoFila({ inscrito: i, otros }: { inscrito: Inscrito; otros
             <p className="mt-1 text-[11.5px] text-ink-soft">{i.porcentajeEnRevision}% por revisar</p>
           )}
           {i.porcentajeManual && <p className="mt-1 text-[11.5px] text-ink-soft">fijado a mano</p>}
+          <a
+            href={`/admin/pagos?inscripcion=${encodeURIComponent(i.id)}`}
+            className="mt-1 inline-block text-[12px] font-semibold text-azure hover:underline"
+          >
+            Ver comprobantes
+          </a>
         </div>
         <form action={asisAction}>
           <input type="hidden" name="taller_id" value={i.tallerId} />

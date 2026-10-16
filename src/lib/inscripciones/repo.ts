@@ -258,12 +258,15 @@ export async function fusionarPersonas(origen: string, destino: string): Promise
 export async function listarComprobantes(f: {
   estado: EstadoComprobante | "todos";
   tallerId: string | null;
+  /** Solo los de una inscripción: el enlace «Comprobantes» de Inscritos. */
+  inscripcionId?: string | null;
 }): Promise<ComprobanteAdmin[] | null> {
   const supabase = getSupabase();
   if (!supabase) return null;
   let consulta = supabase.from("comprobantes_admin").select(COLUMNAS_COMPROBANTE);
   if (f.estado !== "todos") consulta = consulta.eq("estado", f.estado);
   if (f.tallerId) consulta = consulta.eq("taller_id", f.tallerId);
+  if (f.inscripcionId) consulta = consulta.eq("inscripcion_id", f.inscripcionId);
   const { data, error } = await consulta.order("creado_en", { ascending: false }).limit(200);
   if (error) {
     console.error("[inscripciones] no se pudieron listar los comprobantes", { f, error: errorSeguro(error) });
