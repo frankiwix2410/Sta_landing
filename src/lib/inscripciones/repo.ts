@@ -79,9 +79,12 @@ export async function crearInscripcion(n: NuevaInscripcion): Promise<Resultado<I
 
   const fila = primera<FilaCrear>(data);
   if (error || !fila) {
-    // Se deja la inscripción completa en los logs para poder recuperarla a
-    // mano: la persona ya vio su referencia en pantalla.
-    console.error("[inscripciones] no se pudo crear", { referencia: n.referencia, error, inscripcion: n });
+    // Sin datos personales en los logs: la referencia basta para localizarla.
+    console.error("[inscripciones] no se pudo crear", {
+      referencia: n.referencia,
+      tallerId: n.tallerId,
+      error,
+    });
     return fallo("error");
   }
   if (fila.ok && fila.inscripcion_id && fila.inscripcion_referencia) {

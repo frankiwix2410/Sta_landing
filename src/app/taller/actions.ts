@@ -77,8 +77,8 @@ function waitlistMessage(
 }
 
 /**
- * Consultas por documento (buscar la reserva, registrar el pago, buscar
- * certificados): como mucho 12 cada 10 minutos por IP. Frena a quien prueba
+ * Consultas por documento (reservar, buscar la reserva, registrar el pago,
+ * buscar certificados): como mucho 12 cada 10 minutos por IP. Frena a quien prueba
  * documentos para ver quién está inscrito; a una persona real le sobra.
  */
 const limitador = crearLimitador({ max: 12, ventanaMs: 10 * 60 * 1000 });
@@ -168,14 +168,13 @@ export async function createReservation(
       case "documento_invalido":
         return { status: "error", errors: { documento: MENSAJES_INSCRIPCION.documento_invalido } };
       default:
-        // Sin conexión o fallo de la base: la reserva no quedó guardada (repo.ts
-        // la deja en los logs), pero la persona sigue por WhatsApp con su
-        // referencia, como siempre.
+        // Sin conexión o fallo de la base: la reserva no quedó guardada, pero la
+        // persona sigue por WhatsApp con su referencia. Los logs no llevan datos
+        // personales: con la referencia basta para buscarla.
         console.error("[taller] la reserva no quedó en la base; sigue por WhatsApp", {
           motivo: creada.motivo,
           referencia,
-          persona: datos,
-          notas,
+          tallerId: t.id,
         });
     }
   }
@@ -228,7 +227,8 @@ export async function buscarInscripcion(
   _prev: ConsultaState,
   formData: FormData,
 ): Promise<ConsultaState> {
-  const documento = normalizarDocumento(str(formData, "documento"));
+  const crudo = str(formData, "documento");
+  const documento = crudo.length > MAX.documento ? "" : normalizarDocumento(crudo);
   if (!documentoValido(documento))
     return { status: "error", message: "Escribe tu número de documento (cédula o pasaporte)." };
   if (!(await dentroDelLimite())) return { status: "error", message: MENSAJES_INSCRIPCION.limite };
@@ -279,7 +279,8 @@ export async function registrarPago(
 ): Promise<PaymentState> {
   const errors: Record<string, string> = {};
 
-  const documento = normalizarDocumento(str(formData, "documento"));
+  const crudo = str(formData, "documento");
+  const documento = crudo.length > MAX.documento ? "" : normalizarDocumento(crudo);
   if (!documentoValido(documento)) errors.documento = "Vuelve al paso anterior y escribe tu documento.";
 
   const correcciones = leerCorrecciones(formData, errors);

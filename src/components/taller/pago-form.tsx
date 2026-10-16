@@ -376,7 +376,7 @@ function PasoPago({
         {errors.notas && <p className={errorClass}>{errors.notas}</p>}
       </div>
 
-      {parcial && (
+      {(parcial || errors.policy) && (
         <div>
           <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-cream px-4 py-3.5 text-[12.5px] leading-relaxed text-navy">
             <input type="checkbox" name="policy" className="mt-0.5 accent-azure" />
