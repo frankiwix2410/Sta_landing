@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AdminShell } from "@/components/admin/shell";
 import { LoginScreen } from "@/components/admin/login-screen";
+import { AdminShell } from "@/components/admin/shell";
 import { botonPrimario, tarjeta } from "@/components/admin/ui";
 import { puertaAdmin } from "@/lib/admin-auth";
+import { resumenInicio } from "@/lib/inscripciones/repo";
 import { cargarTallerPublico } from "@/lib/talleres/publico";
 import { listarTalleres } from "@/lib/talleres/repo";
 import { ESTADO_ETIQUETA, ESTADOS_TALLER } from "@/lib/talleres/tipos";
@@ -15,6 +16,15 @@ export const metadata: Metadata = {
   title: "Administración · STA",
   robots: { index: false, follow: false },
 };
+
+function Cifra({ href, valor, texto }: { href: string; valor: number; texto: string }) {
+  return (
+    <Link href={href} className={`${tarjeta} block transition-colors duration-200 hover:bg-ice/40`}>
+      <p className="text-[32px] leading-none text-navy">{valor}</p>
+      <p className="mt-2 text-[13px] text-ink">{texto}</p>
+    </Link>
+  );
+}
 
 export default async function AdminPage() {
   if (!(await puertaAdmin())) return <LoginScreen />;
@@ -31,6 +41,11 @@ export default async function AdminPage() {
       </AdminShell>
     );
   }
+
+  const tallerId = publico.kind === "ok" ? publico.vista.id : null;
+  const resumen = await resumenInicio(tallerId);
+  const seats = publico.kind === "ok" ? publico.vista.seats : null;
+  const pct = seats && seats.total > 0 ? Math.min(100, Math.round((seats.ocupados / seats.total) * 100)) : 0;
 
   const conteo = ESTADOS_TALLER.map((e) => ({
     estado: e,
@@ -57,12 +72,19 @@ export default async function AdminPage() {
               {publico.vista.dates.label} · {publico.vista.venue.name}, {publico.vista.venue.city} ·{" "}
               <strong>{ESTADO_ETIQUETA[publico.vista.estado]}</strong>
             </p>
-            {publico.vista.seats && (
+            {seats && (
               <p className="mt-3 text-[14px] text-ink">
-                Cupos: {publico.vista.seats.ocupados}/{publico.vista.seats.total} ocupados ·{" "}
-                {publico.vista.seats.libres} libres
+                Cupos: {seats.ocupados}/{seats.total} ocupados ({pct}%) · {seats.libres} libres
               </p>
             )}
+            <p className="mt-3 flex flex-wrap gap-4 text-[14px] font-semibold">
+              <Link href={`/admin/inscritos?taller=${publico.vista.id}`} className="text-azure hover:underline">
+                Inscritos
+              </Link>
+              <Link href={`/admin/pagos?taller=${publico.vista.id}`} className="text-azure hover:underline">
+                Pagos
+              </Link>
+            </p>
           </>
         ) : (
           <p className="mt-2 text-[14px] text-ink">
@@ -70,6 +92,24 @@ export default async function AdminPage() {
           </p>
         )}
       </section>
+
+      {resumen && (
+        <section className="mt-5 grid gap-4 sm:grid-cols-3">
+          <Cifra href="/admin/pagos" valor={resumen.comprobantesPorRevisar} texto="comprobantes por revisar" />
+          {resumen.pagoIncompleto !== null && tallerId && (
+            <Cifra
+              href={`/admin/inscritos?taller=${tallerId}`}
+              valor={resumen.pagoIncompleto}
+              texto="inscritos con pago incompleto en este taller"
+            />
+          )}
+          <Cifra
+            href={tallerId ? `/admin/inscritos?taller=${tallerId}&estado=sin_documento` : "/admin/inscritos?estado=sin_documento"}
+            valor={resumen.porIdentificar}
+            texto="personas por identificar (sin documento)"
+          />
+        </section>
+      )}
 
       <section className={`${tarjeta} mt-5`}>
         <p className="text-[12.5px] font-semibold tracking-[0.08em] text-azure uppercase">Talleres</p>

@@ -6,6 +6,8 @@ import { botonSecundario } from "./ui";
 const enlaces = [
   { href: "/admin", label: "Inicio" },
   { href: "/admin/talleres", label: "Talleres" },
+  { href: "/admin/inscritos", label: "Inscritos" },
+  { href: "/admin/pagos", label: "Pagos" },
   { href: "/admin/certificados", label: "Certificados" },
 ];
 

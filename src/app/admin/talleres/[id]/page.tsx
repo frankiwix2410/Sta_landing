@@ -45,6 +45,14 @@ export default async function EditarTallerPage({ params }: { params: Promise<{ i
         <>
           {ESTADO_ETIQUETA[taller.estado]} · {taller.fechasTexto}
           {disp && ` · ${disp.ocupados}/${disp.total} cupos ocupados`} ·{" "}
+          <Link href={`/admin/inscritos?taller=${taller.id}`} className="text-azure hover:underline">
+            Inscritos
+          </Link>{" "}
+          ·{" "}
+          <Link href={`/admin/pagos?taller=${taller.id}`} className="text-azure hover:underline">
+            Pagos
+          </Link>{" "}
+          ·{" "}
           <Link href={`/admin/certificados?taller=${taller.slug}`} className="text-azure hover:underline">
             Certificados
           </Link>
