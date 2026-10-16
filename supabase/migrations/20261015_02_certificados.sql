@@ -12,7 +12,7 @@
 --
 -- También endurece dos funciones de la etapa 2 (create or replace, misma firma):
 -- los flujos PÚBLICOS no pueden cambiar nombre ni tipo de documento de una
--- persona con un certificado vigente (quien conozca un documento ajeno no debe
+-- persona con un certificado no revocado a mano (quien conozca un documento ajeno no debe
 -- poder alterar un certificado). Responden ok = true con reason =
 -- 'nombre_bloqueado' para que la interfaz lo avise. El admin sí puede.
 --
@@ -106,7 +106,17 @@ begin
     from public.inscripciones i
     join public.talleres t on t.id = i.taller_id
     join public.personas p on p.id = i.persona_id
-   where i.id = p_inscripcion_id;
+   where i.id = p_inscripcion_id
+  -- Bloquea la fila del taller (compartido) mientras se decide. Sin esto, un
+  -- `update talleres set estado = ...` y un cambio de la inscripción que corren
+  -- a la vez se leen mutuamente a medias: cada uno ve el estado anterior del
+  -- otro y una inscripción que cumple se queda sin certificado. Con el bloqueo
+  -- se serializan: el segundo espera al commit del primero y relee el taller.
+  -- No es un advisory lock a propósito: ajustar_porcentaje toma primero el
+  -- advisory y luego la fila de la inscripción, y el trigger del taller va en
+  -- orden inverso; mezclarlos daría un interbloqueo. La fila del taller solo la
+  -- toman estos caminos y siempre antes que cualquier fila de certificados.
+  for share of t;
 
   if not found then
     return;
@@ -226,6 +236,15 @@ declare
   v_ins      uuid;
   v_revocado timestamptz;
 begin
+  if p_certificado_id is null then
+    return query select false, 'no_encontrado'::text, false;
+    return;
+  end if;
+  if p_revocar is null then
+    return query select false, 'estado_invalido'::text, false;
+    return;
+  end if;
+
   update public.certificados c
      set revocado_manual = p_revocar,
          revocado_en = case when p_revocar then coalesce(c.revocado_en, now()) else c.revocado_en end
@@ -275,14 +294,22 @@ create trigger talleres_horas_certificados
 -- Flujos públicos y certificados vigentes
 --
 -- Mismas funciones de la etapa 2 (misma firma), con un cambio: si la persona
--- tiene un certificado vigente, la web no puede cambiar su nombre ni su tipo
+-- tiene un certificado no revocado a mano (vigente o revocado solo por no
+-- cumplir), la web no puede cambiar su nombre ni su tipo
 -- de documento. El resto de la ficha (email, teléfono…) sí se actualiza. La
 -- respuesta es ok = true con reason = 'nombre_bloqueado'. El admin
 -- (origen = 'admin' y actualizarPersona) sigue pudiendo; el trigger
 -- personas_certificados propaga esas correcciones al certificado.
 -- ---------------------------------------------------------------------------
 
-create or replace function public.persona_tiene_certificado_vigente(p_persona_id uuid)
+-- Reemplaza a persona_tiene_certificado_vigente (versión previa de esta migración).
+drop function if exists public.persona_tiene_certificado_vigente(uuid);
+
+-- «Protegida» = tiene algún certificado que el admin no revocó a mano: vigente,
+-- o revocado solo porque hoy no cumple (p. ej. se le quitó la asistencia). Si
+-- bastara con «vigente», quitar y devolver la asistencia abriría una ventana
+-- para que la web cambie el nombre.
+create or replace function public.persona_tiene_certificado_protegido(p_persona_id uuid)
 returns boolean
 language sql
 stable
@@ -293,7 +320,7 @@ as $$
     select 1
       from public.certificados c
       join public.inscripciones i on i.id = c.inscripcion_id
-     where i.persona_id = p_persona_id and c.revocado_en is null
+     where i.persona_id = p_persona_id and not c.revocado_manual
   )
 $$;
 
@@ -395,9 +422,9 @@ begin
     return;
   end if;
 
-  -- Con un certificado vigente, la web no toca nombre ni tipo de documento.
+  -- Con un certificado no revocado a mano, la web no toca nombre ni tipo de documento.
   if v_persona is not null and p_origen = 'web' then
-    v_bloquear := public.persona_tiene_certificado_vigente(v_persona);
+    v_bloquear := public.persona_tiene_certificado_protegido(v_persona);
   end if;
 
   -- Documento conocido → se actualiza la ficha. Un campo vacío no borra lo guardado.
@@ -521,8 +548,8 @@ begin
     return;
   end if;
 
-  -- Con un certificado vigente, la web no puede corregir el nombre.
-  v_bloquear := public.persona_tiene_certificado_vigente(v_persona.id);
+  -- Con un certificado no revocado a mano, la web no puede corregir el nombre.
+  v_bloquear := public.persona_tiene_certificado_protegido(v_persona.id);
   v_bloqueado := v_bloquear
                  and lower(btrim(coalesce(p_nombre, ''))) not in ('', lower(btrim(v_persona.nombre)));
 
@@ -636,7 +663,7 @@ begin
     'public.trg_taller_certificados()',
     'public.trg_persona_certificados()',
     'public.trg_taller_horas_certificados()',
-    'public.persona_tiene_certificado_vigente(uuid)',
+    'public.persona_tiene_certificado_protegido(uuid)',
     'public.revocar_certificado(uuid, boolean)'
   ] loop
     execute format('revoke all on function %s from public, anon, authenticated', f);

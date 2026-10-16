@@ -16,7 +16,7 @@ insert into public.talleres
   (slug, nombre, titulo, estado, fecha_inicio, fecha_fin, fechas_texto, sede_nombre, ciudad, pais, cupos_total)
 select s, upper(s), upper(s), 'publicado', d, d + 1, 'x', 'S', 'C', 'P', 5
   from (values ('prueba-c2', date '2032-04-10'), ('prueba-d', date '2032-05-10'),
-               ('prueba-e', date '2032-06-10')) v(s, d);
+               ('prueba-e', date '2032-06-10'), ('prueba-f', date '2032-07-10')) v(s, d);
 
 do $$
 declare
@@ -29,6 +29,7 @@ declare
   v_t2     uuid := (select id from public.talleres where slug = 'prueba-c2');
   v_t3     uuid := (select id from public.talleres where slug = 'prueba-d');
   v_t4     uuid := (select id from public.talleres where slug = 'prueba-e');
+  v_t5     uuid := (select id from public.talleres where slug = 'prueba-f');
 begin
   select * into r from public.crear_inscripcion(v_taller, 'STA-CERT0001', '55.666.777', 'CI',
     'Eva Prueba', 'eva@example.com', '3005556677', 'Maracaibo', 'Médica',
@@ -84,6 +85,7 @@ begin
 
   -- 5. Revocado a mano: la emisión automática no lo reactiva; el admin sí.
   select * into r from public.revocar_certificado(v_cert.id, true);
+  if not r.ok or r.vigente then raise exception 'FALLO 5c: % %', r.ok, r.vigente; end if;
   update public.inscripciones set asistio = false where id = v_ins;
   update public.inscripciones set asistio = true where id = v_ins;
   if (select revocado_en from public.certificados where id = v_cert.id) is null then
@@ -138,12 +140,13 @@ begin
 
   -- 11. Las horas también llegan a un certificado revocado, y no lo reactivan.
   select * into r from public.revocar_certificado(v_cert.id, true);
+  if not r.ok or r.vigente then raise exception 'FALLO 11a: % %', r.ok, r.vigente; end if;
   update public.talleres set horas = 24 where id = v_taller;
   select * into v_cert from public.certificados where inscripcion_id = v_ins;
   if v_cert.horas <> 24 or v_cert.revocado_en is null then
     raise exception 'FALLO 11: horas % revocado %', v_cert.horas, v_cert.revocado_en;
   end if;
-  -- Revocado, la web sí puede corregir el nombre (no hay certificado vigente).
+  -- Revocado a mano, la web sí puede corregir el nombre.
   select * into r from public.crear_inscripcion(v_t2, 'STA-CERT0003', '55666777', 'CI',
     'Eva Revocada', '', '', '', '', 'general', 'Cupo General', null, null, '', 'web', false);
   if not r.ok or r.reason is not null then raise exception 'FALLO 11b: % %', r.ok, r.reason; end if;
@@ -196,14 +199,37 @@ begin
   end if;
   raise notice 'OK el admin corrige el nombre y el certificado lo sigue';
 
-  -- 15. Permisos.
+  -- 15. Revocado solo por no cumplir (sin asistencia) sigue protegido.
+  update public.inscripciones set asistio = false where id = v_ins;
+  if (select revocado_en from public.certificados where inscripcion_id = v_ins) is null then
+    raise exception 'FALLO 15a: no se revocó';
+  end if;
+  select * into r from public.crear_inscripcion(v_t5, 'STA-CERT0006', '55666777', 'CI',
+    'Nombre Nuevo', '', '', '', '', 'general', 'Cupo General', null, null, '', 'web', false);
+  if not r.ok or r.reason is distinct from 'nombre_bloqueado' then
+    raise exception 'FALLO 15b: % %', r.ok, r.reason;
+  end if;
+  if (select nombre from public.personas where documento = '55666777') <> 'Eva M. Prueba' then
+    raise exception 'FALLO 15c: la web renombró';
+  end if;
+  update public.inscripciones set asistio = true where id = v_ins;
+  raise notice 'OK sigue protegido si el certificado se revocó solo por no cumplir';
+
+  -- 16. Argumentos nulos: razón, no excepción.
+  select * into r from public.revocar_certificado(null, true);
+  if r.ok or r.reason is distinct from 'no_encontrado' then raise exception 'FALLO 16a: %', r.reason; end if;
+  select * into r from public.revocar_certificado(v_cert.id, null);
+  if r.ok or r.reason is distinct from 'estado_invalido' then raise exception 'FALLO 16b: %', r.reason; end if;
+  raise notice 'OK revocar con argumentos nulos devuelve razón';
+
+  -- 17. Permisos.
   if has_function_privilege('anon', 'public.revocar_certificado(uuid,boolean)', 'execute')
-     or has_function_privilege('anon', 'public.persona_tiene_certificado_vigente(uuid)', 'execute')
+     or has_function_privilege('anon', 'public.persona_tiene_certificado_protegido(uuid)', 'execute')
      or has_function_privilege('authenticated', 'public.crear_inscripcion(uuid,text,text,text,text,text,text,text,text,text,text,integer,text,text,text,boolean)', 'execute')
      or not has_function_privilege('service_role', 'public.registrar_comprobante(uuid,text,uuid,integer,text,text,text,text,text,text,integer)', 'execute')
      or has_function_privilege('authenticated', 'public.sincronizar_certificado(uuid)', 'execute')
      or not has_function_privilege('service_role', 'public.revocar_certificado(uuid,boolean)', 'execute') then
-    raise exception 'FALLO 15: permisos';
+    raise exception 'FALLO 17: permisos';
   end if;
   raise notice 'OK permisos';
 end
