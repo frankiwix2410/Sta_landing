@@ -89,6 +89,7 @@ export function InscritoFila({ inscrito: i, otros }: { inscrito: Inscrito; otros
           {i.porcentajeManual && <p className="mt-1 text-[11.5px] text-ink-soft">fijado a mano</p>}
         </div>
         <form action={asisAction}>
+          <input type="hidden" name="taller_id" value={i.tallerId} />
           <input type="hidden" name="ids" value={i.id} />
           <input type="hidden" name="accion" value={i.asistio ? "quitar" : "marcar"} />
           <button

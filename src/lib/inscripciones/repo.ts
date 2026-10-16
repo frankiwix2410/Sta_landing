@@ -170,12 +170,12 @@ export async function actualizarPersona(id: string, d: DatosPersona): Promise<Re
   return data.length > 0 ? { ok: true, valor: null } : fallo("no_encontrado");
 }
 
-export async function marcarAsistencia(ids: string[], asistio: boolean): Promise<Resultado<number>> {
+export async function marcarAsistencia(tallerId: string, ids: string[], asistio: boolean): Promise<Resultado<number>> {
   const supabase = getSupabase();
   if (!supabase) return fallo("sin_conexion");
-  const { data, error } = await supabase.from("inscripciones").update({ asistio }).in("id", ids).select("id");
+  const { data, error } = await supabase.from("inscripciones").update({ asistio }).eq("taller_id", tallerId).in("id", ids).select("id");
   if (error) {
-    console.error("[inscripciones] no se pudo marcar asistencia", { ids, error });
+    console.error("[inscripciones] no se pudo marcar asistencia", { tallerId, cantidad: ids.length, error });
     return fallo(motivoDesdeErrorPg(error));
   }
   return { ok: true, valor: data.length };

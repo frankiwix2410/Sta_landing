@@ -127,7 +127,7 @@ export default async function InscritosPage({ searchParams }: { searchParams: Pr
             {lista.length > activos.length && ` · ${lista.length - activos.length} canceladas`}
           </p>
           <div className="mb-3">
-            <AsistenciaLote />
+            <AsistenciaLote tallerId={taller.id} />
           </div>
           {visibles.length === 0 ? (
             <p className={tarjeta}>

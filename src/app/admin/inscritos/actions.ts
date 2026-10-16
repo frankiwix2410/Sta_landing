@@ -149,11 +149,14 @@ export async function guardarPersona(_prev: EstadoAccion, fd: FormData): Promise
 export async function asistencia(_prev: EstadoAccion, fd: FormData): Promise<EstadoAccion> {
   if (!(await isAdmin())) return SESION_VENCIDA;
 
+  const tallerId = idDe(fd, "taller_id");
+  if (!tallerId) return fallo("taller_desconocido");
   const ids = fd.getAll("ids").map(String).filter(esUuid);
   if (ids.length === 0) return { status: "error", errores: {}, message: "Marca al menos una persona." };
+  if (ids.length > 500) return { status: "error", errores: {}, message: "Demasiadas personas a la vez (máximo 500)." };
   const asistio = fd.get("accion") !== "quitar";
 
-  const r = await marcarAsistencia(ids, asistio);
+  const r = await marcarAsistencia(tallerId, ids, asistio);
   if (!r.ok) return fallo(r.motivo);
   refrescar();
   return {
@@ -168,7 +171,7 @@ export async function ajustarPorcentajeAccion(_prev: EstadoAccion, fd: FormData)
   const id = idDe(fd, "id");
   if (!id) return fallo("no_encontrado");
   const valor = String(fd.get("porcentaje") ?? "auto");
-  const porcentaje = valor === "auto" ? null : Number(valor);
+  const porcentaje = valor === "auto" ? null : /^\d{1,3}$/.test(valor) ? Number(valor) : Number.NaN;
   if (porcentaje !== null && (!Number.isInteger(porcentaje) || porcentaje < 0 || porcentaje > 100)) {
     return { status: "error", errores: {}, message: "Porcentaje no válido." };
   }

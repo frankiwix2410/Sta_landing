@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useActionState, type FormEvent } from "react";
+import { startTransition, useActionState, useState, type FormEvent } from "react";
 import {
   buscarPersonaAdmin,
   inscribirManual,
@@ -28,15 +28,15 @@ function enviarCon(accion: (fd: FormData) => void) {
  * Inscribir a mano: cupos apartados por WhatsApp. Primero el documento; si la
  * persona ya existe, su ficha se rellena sola y aquí se puede corregir.
  */
-export function InscribirForm({
-  tallerId,
-  tarifas,
-  lleno,
-}: {
-  tallerId: string;
-  tarifas: Tarifa[];
-  lleno: boolean;
-}) {
+type Props = { tallerId: string; tarifas: Tarifa[]; lleno: boolean };
+
+/** La `key` reinicia ambos pasos al terminar, para inscribir a otra persona. */
+export function InscribirForm(props: Props) {
+  const [ronda, setRonda] = useState(0);
+  return <InscribirPasos key={ronda} {...props} otra={() => setRonda((n) => n + 1)} />;
+}
+
+function InscribirPasos({ tallerId, tarifas, lleno, otra }: Props & { otra: () => void }) {
   const [busqueda, buscar, buscando] = useActionState(buscarPersonaAdmin, busquedaInicial);
   const [state, inscribir, inscribiendo] = useActionState(inscribirManual, inicial);
   const errores = state.status === "error" ? state.errores : {};
@@ -92,7 +92,16 @@ export function InscribirForm({
         )}
       </form>
 
-      {busqueda.status === "listo" && (
+      {state.status === "ok" && (
+        <div className="flex flex-wrap items-center gap-3 border-t border-navy/10 pt-5">
+          <Mensaje state={state} />
+          <button type="button" onClick={otra} className={botonSecundario}>
+            Inscribir a otra persona
+          </button>
+        </div>
+      )}
+
+      {busqueda.status === "listo" && state.status !== "ok" && (
         <form
           key={`${busqueda.documento}-${persona?.id ?? "nueva"}`}
           onSubmit={enviarCon(inscribir)}
