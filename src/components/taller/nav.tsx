@@ -14,6 +14,7 @@ const links = [
   { href: "#galeria", label: "Galería" },
   { href: "#instructor", label: "Instructor" },
   { href: "#registro-pago", label: "Registrar pago" },
+  { href: "#certificados", label: "Certificados" },
   { href: "#faq", label: "Preguntas" },
 ];
 
@@ -26,8 +27,13 @@ const links = [
  */
 export function TallerNav() {
   const taller = useTaller();
-  // "Registrar pago" solo existe en la página si el taller acepta pagos.
-  const visibles = links.filter((l) => l.href !== "#registro-pago" || taller.mostrar.pago);
+  // "Registrar pago" y "Certificados" solo existen en la página si el estado
+  // del taller los muestra.
+  const visibles = links.filter(
+    (l) =>
+      (l.href !== "#registro-pago" || taller.mostrar.pago) &&
+      (l.href !== "#certificados" || taller.mostrar.certificados),
+  );
   const cta = taller.mostrar.reserva ? "Reservar cupo" : taller.mostrar.listaEspera ? "Lista de espera" : null;
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);

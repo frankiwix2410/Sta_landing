@@ -124,6 +124,10 @@ const contenido = {
       a: "Sí. Al completar las dos jornadas recibes certificado de asistencia, avalado por SCARE – SARG.",
     },
     {
+      q: "¿Cómo descargo mi certificado?",
+      a: "Cuando el taller termina, si tienes el pago completo y la asistencia registrada, tu certificado queda listo con tu nombre y tu documento. Búscalo en la sección «Certificados» de esta página con tu número de documento y guárdalo en PDF. Lleva un código y un QR para que cualquiera pueda verificarlo.",
+    },
+    {
       q: "¿Cómo se confirma mi cupo?",
       a: "Al enviar el formulario con tu número de documento generamos tu reserva y te contactamos por WhatsApp para cerrar el pago. Cuando pagues, entra en «Registrar pago», escribe el mismo documento y sube el comprobante. El cupo queda confirmado cuando verificamos el pago.",
     },

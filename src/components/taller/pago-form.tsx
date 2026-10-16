@@ -12,7 +12,7 @@ import { WhatsAppIcon } from "@/components/ui/icons";
 import type { ConsultaPago } from "@/lib/inscripciones/consulta";
 import { montoDePorcentaje } from "@/lib/inscripciones/pagos";
 import { PROOF_ACCEPT, PROOF_MAX_BYTES } from "@/lib/reservations/types";
-import { formatPrice } from "@/lib/taller";
+import { formatPrice, tallerWaLink } from "@/lib/taller";
 import { useTaller } from "@/lib/talleres/contexto";
 
 const consultaInicial: ConsultaState = { status: "idle" };
@@ -174,6 +174,20 @@ function PasoPago({
             Para el próximo pago y para tu certificado basta con tu documento.
           </p>
         </div>
+        {state.nombreBloqueado && (
+          <p className="mt-4 rounded-xl bg-cream px-4 py-3 text-[13.5px] leading-[1.7] text-navy">
+            Tu nombre ya figura en un certificado; para corregirlo{" "}
+            <a
+              href={tallerWaLink("Hola, quiero corregir mi nombre en un certificado.")}
+              target="_blank"
+              rel="noopener"
+              className="font-semibold text-azure underline-offset-4 hover:underline"
+            >
+              escríbenos por WhatsApp
+            </a>
+            .
+          </p>
+        )}
         {!state.completo && (
           <p className="mt-4 rounded-xl bg-cream px-4 py-3 text-[13.5px] leading-[1.7] text-navy">
             Recuerda: si no completas el pago a tiempo, no hay reembolso de lo abonado.

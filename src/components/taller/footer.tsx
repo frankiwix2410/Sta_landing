@@ -57,6 +57,14 @@ export function TallerFooter({ taller }: { taller: TallerVista }) {
                   Registrar pago
                 </a>
               )}
+              {taller.mostrar.certificados && (
+                <a
+                  href="#certificados"
+                  className="text-[13.5px] text-white/80 transition-colors hover:text-white"
+                >
+                  Descargar certificado
+                </a>
+              )}
               <Link
                 href="/"
                 className="text-[13.5px] text-white/80 transition-colors hover:text-white"

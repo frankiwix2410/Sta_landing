@@ -77,6 +77,24 @@ function SoldOutPanel({ message, handoffUrl }: { message: string; handoffUrl: st
   );
 }
 
+/** La reserva se guardó, pero nombre y documento no cambiaron: ya hay certificado. */
+function AvisoNombreBloqueado() {
+  return (
+    <p className="mt-4 rounded-xl bg-white px-4 py-3 text-[13.5px] leading-[1.7] text-navy">
+      Tu nombre ya figura en un certificado; para corregirlo{" "}
+      <a
+        href={tallerWaLink("Hola, quiero corregir mi nombre en un certificado.")}
+        target="_blank"
+        rel="noopener"
+        className="font-semibold text-azure underline-offset-4 hover:underline"
+      >
+        escríbenos por WhatsApp
+      </a>
+      .
+    </p>
+  );
+}
+
 export function ReservaForm() {
   const taller = useTaller();
   const seats = taller.seats;
@@ -157,6 +175,7 @@ export function ReservaForm() {
         <p className="mt-5 inline-block rounded-full bg-white px-5 py-2 font-mono text-[13px] tracking-wider text-navy">
           Referencia: <strong>{result.reference}</strong>
         </p>
+        {state.nombreBloqueado && <AvisoNombreBloqueado />}
         <a
           href={result.kind === "pending" ? result.handoffUrl : result.url}
           target="_blank"

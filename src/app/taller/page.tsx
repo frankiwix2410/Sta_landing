@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ScrollProgress } from "@/components/scroll-progress";
+import { CertificadosSection } from "@/components/taller/certificados";
 import { TallerFooter } from "@/components/taller/footer";
 import { TallerHero } from "@/components/taller/hero";
 import { TallerNav } from "@/components/taller/nav";
@@ -94,11 +95,14 @@ export default async function TallerPage() {
       />
       <main>
         <TallerHero />
+        {/* Con el taller terminado lo que se busca es el certificado: va arriba. */}
+        {t.mostrar.certificados && t.estado === "finalizado" && <CertificadosSection destacada />}
         <Contenido />
         <Galeria />
         <Instructor />
         {(t.mostrar.reserva || t.mostrar.listaEspera) && <ReservaSection />}
         {t.mostrar.pago && <PagoSection />}
+        {t.mostrar.certificados && t.estado !== "finalizado" && <CertificadosSection destacada={false} />}
         <Faq />
       </main>
       <TallerFooter taller={t} />

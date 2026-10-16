@@ -2,6 +2,8 @@
 
 import { headers } from "next/headers";
 import { getPaymentProvider, type CheckoutResult, type Money, type OrderDraft } from "@/lib/payments";
+import { certificadosPorDocumento } from "@/lib/certificados/repo";
+import type { CertificadoPublico } from "@/lib/certificados/tipos";
 import { guardarComprobante } from "@/lib/inscripciones/comprobantes";
 import { respuestaConsulta, type ConsultaPago } from "@/lib/inscripciones/consulta";
 import { documentoValido, normalizarDocumento } from "@/lib/inscripciones/documento";
@@ -24,7 +26,7 @@ export type ReserveState =
   | { status: "sold_out"; message: string; handoffUrl: string }
   /** Ese documento ya tiene reserva en este taller. */
   | { status: "ya_inscrito"; message: string }
-  | { status: "ok"; result: CheckoutResult };
+  | { status: "ok"; result: CheckoutResult; nombreBloqueado?: boolean };
 
 function str(formData: FormData, key: string) {
   const v = formData.get(key);
@@ -198,7 +200,7 @@ export async function createReservation(
 
   try {
     const result = await getPaymentProvider().createCheckout(order);
-    return { status: "ok", result };
+    return { status: "ok", result, nombreBloqueado: creada.ok && creada.valor.nombreBloqueado };
   } catch (err) {
     console.error("[taller] createCheckout falló", { reference: order.reference, err });
     return {
@@ -264,7 +266,7 @@ export async function buscarInscripcion(
 export type PaymentState =
   | { status: "idle" }
   | { status: "error"; errors: Record<string, string>; message?: string; handoffUrl?: string }
-  | { status: "ok"; porcentaje: number; referencia: string; completo: boolean; handoffUrl: string };
+  | { status: "ok"; porcentaje: number; referencia: string; completo: boolean; handoffUrl: string; nombreBloqueado?: boolean };
 
 /**
  * Paso 2: registra el comprobante.
@@ -379,6 +381,7 @@ export async function registrarPago(
       referencia: guardado.valor.referencia,
       completo: pagado + guardado.valor.enRevision >= 100,
       handoffUrl: handoff(guardado.valor.referencia),
+      nombreBloqueado: guardado.valor.nombreBloqueado,
     };
   }
 
@@ -395,4 +398,37 @@ export async function registrarPago(
         : MENSAJES_INSCRIPCION[motivo],
     handoffUrl: handoff(null),
   };
+}
+
+/* ----------------------------------------------------------- Certificados */
+
+export type CertificadosState =
+  | { status: "idle" }
+  | { status: "error"; message: string }
+  | { status: "ok"; certificados: CertificadoPublico[] };
+
+/**
+ * «Descarga tu certificado»: los vigentes de ese documento en todos los
+ * talleres. Sin resultados la respuesta es la misma exista o no la persona,
+ * y comparte el límite por IP con las demás consultas por documento.
+ */
+export async function buscarCertificados(
+  _prev: CertificadosState,
+  formData: FormData,
+): Promise<CertificadosState> {
+  // Se acota el texto crudo antes de normalizar, como en las demás acciones públicas.
+  const crudo = str(formData, "documento");
+  const documento = crudo.length > MAX.documento ? "" : normalizarDocumento(crudo);
+  if (!documentoValido(documento))
+    return { status: "error", message: "Escribe tu número de documento (cédula o pasaporte)." };
+  if (!(await dentroDelLimite())) return { status: "error", message: MENSAJES_INSCRIPCION.limite };
+
+  const certificados = await certificadosPorDocumento(documento);
+  if (certificados === null) {
+    return {
+      status: "error",
+      message: "No pudimos consultar los certificados ahora mismo. Inténtalo en unos minutos.",
+    };
+  }
+  return { status: "ok", certificados };
 }
