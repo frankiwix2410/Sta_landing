@@ -10,6 +10,8 @@ import type { Disponibilidad, Taller, TallerEstado, Visibilidad } from "./tipos"
 export type TierVista = { id: string; name: string; desc: string; amount: number; featured: boolean };
 
 export type TallerVista = {
+  /** Las funciones de inscripción reciben el id, no el slug. */
+  id: string;
   slug: string;
   /** Estado efectivo: un publicado vencido llega como `finalizado`. */
   estado: TallerEstado;
@@ -57,6 +59,7 @@ export function construirTallerVista(
   const mostrar = visibilidad(estado, disp);
 
   return {
+    id: taller.id,
     slug: taller.slug,
     estado,
     title: taller.titulo,

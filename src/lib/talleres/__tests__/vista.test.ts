@@ -8,6 +8,7 @@ const disp = { total: 20, ocupados: 8, libres: 12 };
 describe("construirTallerVista", () => {
   it("toma lo operativo de la base", () => {
     const v = construirTallerVista(tallerDePrueba(), "publicado", disp);
+    expect(v.id).toBe("00000000-0000-0000-0000-000000000001");
     expect(v.slug).toBe("taller-2026-10");
     expect(v.title).toBe("Anestesia Regional Ecoguiada");
     expect(v.titleAccent).toBe("+ Sedación TCI");

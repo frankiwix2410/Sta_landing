@@ -94,16 +94,16 @@ export async function listarDisponibilidades(): Promise<Map<string, Disponibilid
   return mapa;
 }
 
-/** Reservas del taller, incluidas las canceladas: cualquiera impide borrarlo. */
-export async function contarInscripciones(slug: string): Promise<number | null> {
+/** Inscripciones del taller, incluidas las canceladas: cualquiera impide borrarlo. */
+export async function contarInscripciones(tallerId: string): Promise<number | null> {
   const supabase = getSupabase();
   if (!supabase) return null;
   const { count, error } = await supabase
-    .from("reservations")
+    .from("inscripciones")
     .select("id", { count: "exact", head: true })
-    .eq("edition", slug);
+    .eq("taller_id", tallerId);
   if (error) {
-    console.error("[talleres] no se pudieron contar las reservas", { slug, error });
+    console.error("[talleres] no se pudieron contar las inscripciones", { tallerId, error });
     return null;
   }
   return count ?? 0;
@@ -127,11 +127,11 @@ export async function crearTaller(input: TallerInput): Promise<Resultado<string>
 export async function actualizarTaller(id: string, input: TallerInput): Promise<Resultado<null>> {
   const supabase = getSupabase();
   if (!supabase) return fallo("sin_conexion");
-  // El slug es la clave con la que las reservas apuntan al taller: solo se
-  // puede cambiar mientras no tenga ninguna.
+  // El slug nombra la carpeta de los comprobantes y las tablas `_legacy_*`
+  // apuntan a él: solo se cambia mientras el taller no tenga inscripciones.
   const actual = await obtenerTaller(id);
   if (!actual.ok) return actual;
-  const reservas = await contarInscripciones(actual.valor.slug);
+  const reservas = await contarInscripciones(id);
   if (reservas === null) return fallo("error");
   const { slug, ...sinSlug } = tallerAFila(input);
   const fila = reservas === 0 ? { slug, ...sinSlug } : sinSlug;
@@ -177,7 +177,7 @@ export async function eliminarTaller(id: string): Promise<Resultado<null>> {
   const taller = await obtenerTaller(id);
   if (!taller.ok) return taller;
 
-  const reservas = await contarInscripciones(taller.valor.slug);
+  const reservas = await contarInscripciones(id);
   if (reservas === null) return fallo("error");
   if (reservas > 0) return fallo("tiene_inscripciones");
 

@@ -34,7 +34,7 @@ export default async function EditarTallerPage({ params }: { params: Promise<{ i
 
   const taller = r.valor;
   const [reservas, disp] = await Promise.all([
-    contarInscripciones(taller.slug),
+    contarInscripciones(taller.id),
     obtenerDisponibilidad(taller.slug),
   ]);
 
