@@ -1,22 +1,35 @@
 "use client";
 
 import { startTransition, useActionState, useEffect, useMemo, useState } from "react";
-import { registerPayment, type PaymentState } from "@/app/taller/actions";
+import {
+  buscarInscripcion,
+  registrarPago,
+  type ConsultaState,
+  type PaymentState,
+} from "@/app/taller/actions";
 import { Reveal } from "@/components/ui/motion-primitives";
 import { WhatsAppIcon } from "@/components/ui/icons";
-import { PROOF_ACCEPT, PROOF_MAX_BYTES, type PaymentKind } from "@/lib/reservations/types";
+import type { ConsultaPago } from "@/lib/inscripciones/consulta";
+import { montoDePorcentaje } from "@/lib/inscripciones/pagos";
+import { PROOF_ACCEPT, PROOF_MAX_BYTES } from "@/lib/reservations/types";
+import { formatPrice } from "@/lib/taller";
 import { useTaller } from "@/lib/talleres/contexto";
 
-const initialState: PaymentState = { status: "idle" };
+const consultaInicial: ConsultaState = { status: "idle" };
+const pagoInicial: PaymentState = { status: "idle" };
 
 const inputClass =
   "w-full rounded-xl border border-navy/15 bg-white px-4 py-3.5 text-sm text-navy outline-none transition-colors duration-200 placeholder:text-ink-soft/60 focus:border-azure";
 const labelClass = "mb-2 block text-[12.5px] font-semibold tracking-[0.04em] text-navy";
 const errorClass = "mt-1.5 text-[12px] text-red-600";
+const botonClass =
+  "mt-1 inline-flex cursor-pointer items-center justify-center gap-2.5 rounded-xl bg-navy py-4 text-[14.5px] font-semibold text-white transition-colors duration-300 hover:bg-azure disabled:cursor-wait disabled:opacity-60";
 
-const KINDS: { value: PaymentKind; title: string; desc: string }[] = [
-  { value: "deposit", title: "Abono del 50%", desc: "Pagué la primera mitad" },
-  { value: "full", title: "Pago completo", desc: "Pagué el 100% del taller" },
+type Campo = "nombre" | "email" | "telefono";
+const CAMPOS: { campo: Campo; etiqueta: string; tipo: string; max: number; ayuda: string }[] = [
+  { campo: "nombre", etiqueta: "Nombre", tipo: "text", max: 120, ayuda: "Nombre completo, tal como debe salir en el certificado" },
+  { campo: "email", etiqueta: "Email", tipo: "email", max: 160, ayuda: "Email completo" },
+  { campo: "telefono", etiqueta: "WhatsApp", tipo: "tel", max: 40, ayuda: "WhatsApp completo, con indicativo" },
 ];
 
 function formatSize(bytes: number) {
@@ -25,33 +38,85 @@ function formatSize(bytes: number) {
     : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function Field({
-  id,
-  label,
-  error,
-  children,
-}: {
-  id: string;
-  label: string;
-  error?: string;
-  children: React.ReactNode;
-}) {
+/**
+ * Paso 1: solo el documento. Hasta saber que hay una reserva activa no se pide
+ * nada más, y lo que vuelve del servidor llega enmascarado.
+ */
+export function PagoForm({ onReiniciar }: { onReiniciar: () => void }) {
+  const [consulta, buscar, buscando] = useActionState(buscarInscripcion, consultaInicial);
+
+  if (consulta.status === "ok") {
+    return <PasoPago documento={consulta.documento} consulta={consulta.consulta} onReiniciar={onReiniciar} />;
+  }
+
   return (
-    <div>
-      <label htmlFor={id} className={labelClass}>
-        {label}
-      </label>
-      {children}
-      {error && <p className={errorClass}>{error}</p>}
-    </div>
+    <form
+      onSubmit={(e) => {
+        // A mano y no con `action`: así un «no encontramos tu reserva» no
+        // borra el documento que la persona acaba de escribir.
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
+        startTransition(() => buscar(formData));
+      }}
+      className="flex flex-col gap-4 rounded-3xl bg-white p-6 sm:p-8"
+    >
+      <div>
+        <label htmlFor="pago-documento" className={labelClass}>
+          Número de documento con el que reservaste
+        </label>
+        <input
+          id="pago-documento"
+          name="documento"
+          required
+          type="text"
+          autoComplete="off"
+          maxLength={30}
+          placeholder="Cédula o pasaporte"
+          className={inputClass}
+        />
+      </div>
+      <p className="text-[12.5px] leading-relaxed text-ink-soft">
+        Buscamos tu reserva en esta edición y te mostramos tus datos ocultos en parte para que
+        confirmes que eres tú.
+      </p>
+
+      {consulta.status === "error" && (
+        <div role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-[13px] text-red-700">
+          {consulta.message}
+          {consulta.sinReserva && (
+            <a href="#reservar" className="mt-1.5 block font-semibold underline underline-offset-4">
+              Reservar mi cupo
+            </a>
+          )}
+        </div>
+      )}
+
+      <button type="submit" disabled={buscando} className={botonClass}>
+        {buscando ? "Buscando…" : "Continuar"}
+      </button>
+    </form>
   );
 }
 
-export function PagoForm() {
-  const taller = useTaller();
-  const aceptaAbono = taller.porcentajesPago.includes(50);
-  const [state, formAction, pending] = useActionState(registerPayment, initialState);
-  const [kind, setKind] = useState<PaymentKind | null>(null);
+/** Paso 2: datos enmascarados, cuánto pagó y el comprobante. */
+function PasoPago({
+  documento,
+  consulta,
+  onReiniciar,
+}: {
+  documento: string;
+  consulta: ConsultaPago;
+  onReiniciar: () => void;
+}) {
+  const [state, formAction, pending] = useActionState(registrarPago, pagoInicial);
+  const [porcentaje, setPorcentaje] = useState<number | null>(
+    consulta.opciones.length === 1 ? consulta.opciones[0].porcentaje : null,
+  );
+  const [corregir, setCorregir] = useState<Record<Campo, boolean>>({
+    nombre: false,
+    email: false,
+    telefono: false,
+  });
   const [file, setFile] = useState<File | null>(null);
   const [clientErrors, setClientErrors] = useState<Record<string, string>>({});
 
@@ -64,23 +129,22 @@ export function PagoForm() {
   useEffect(() => () => void (preview && URL.revokeObjectURL(preview)), [preview]);
 
   const errors = { ...(state.status === "error" ? state.errors : {}), ...clientErrors };
+  const parcial = porcentaje !== null && consulta.pagado + consulta.enRevision + porcentaje < 100;
 
   /**
-   * El envío se despacha a mano y no con `<form action>`: React resetea el
-   * formulario tras cada acción, y perder el archivo elegido por un error de
-   * validación obliga a buscar la captura otra vez.
+   * Se despacha a mano y no con `<form action>`: React resetea el formulario
+   * tras cada acción, y perder el archivo elegido por un error de validación
+   * obliga a buscar la captura otra vez.
    */
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-
     const next: Record<string, string> = {};
-    if (!kind) next.kind = "Indica si pagaste el abono o el taller completo.";
+    if (porcentaje === null) next.porcentaje = "Elige cuánto pagaste.";
     if (!file) next.proof = "Sube la captura o el comprobante de pago.";
     // Por encima del límite el server action rechaza la petición antes de
     // ejecutarse, así que el aviso tiene que salir de aquí.
     else if (file.size > PROOF_MAX_BYTES)
       next.proof = "El archivo supera 5 MB. Sube una captura de pantalla o un PDF más liviano.";
-
     setClientErrors(next);
     if (Object.keys(next).length > 0) return;
 
@@ -96,24 +160,23 @@ export function PagoForm() {
         </span>
         <h3 className="mt-5 text-[26px] text-navy">Pago registrado</h3>
         <p className="mt-3 text-[15px] leading-[1.8] text-ink">
-          {state.kind === "deposit"
-            ? "Recibimos el comprobante de tu abono del 50%. Lo verificamos y te confirmamos el cupo por WhatsApp."
-            : "Recibimos el comprobante de tu pago completo. Lo verificamos y te confirmamos el cupo por WhatsApp."}
+          Recibimos el comprobante de tu pago del {state.porcentaje}%. Lo verificamos y te
+          avisamos por WhatsApp.
         </p>
         <div className="mt-6 rounded-2xl border border-navy/10 bg-ice/40 px-5 py-4">
           <p className="text-[12px] font-semibold tracking-[0.08em] text-ink-soft uppercase">
             Tu número de reserva
           </p>
           <p className="mt-1 font-mono text-[26px] font-semibold tracking-wider text-navy select-all">
-            {state.reference}
+            {state.referencia}
           </p>
           <p className="mt-1 text-[12px] text-ink-soft">
-            Guárdalo: lo necesitas para el pago restante y para tu certificado.
+            Para el próximo pago y para tu certificado basta con tu documento.
           </p>
         </div>
-        {state.kind === "deposit" && (
+        {!state.completo && (
           <p className="mt-4 rounded-xl bg-cream px-4 py-3 text-[13.5px] leading-[1.7] text-navy">
-            Recuerda: {taller.payment.policy.charAt(0).toLowerCase() + taller.payment.policy.slice(1)}
+            Recuerda: si no completas el pago a tiempo, no hay reembolso de lo abonado.
           </p>
         )}
         <a
@@ -125,6 +188,33 @@ export function PagoForm() {
           <WhatsAppIcon className="size-[18px]" />
           Avisar por WhatsApp
         </a>
+        <button
+          type="button"
+          onClick={onReiniciar}
+          className="mt-4 text-[13px] font-semibold text-azure underline-offset-4 hover:underline"
+        >
+          Registrar otro pago
+        </button>
+      </div>
+    );
+  }
+
+  if (consulta.opciones.length === 0) {
+    return (
+      <div className="rounded-3xl bg-white p-6 text-center sm:p-10">
+        <h3 className="text-[24px] text-navy">Ya registraste el 100%</h3>
+        <p className="mt-3 text-[15px] leading-[1.8] text-ink">
+          Llevas {consulta.pagado}% verificado
+          {consulta.enRevision > 0 ? ` y ${consulta.enRevision}% en revisión` : ""}. Si necesitas
+          corregir un comprobante, escríbenos por WhatsApp.
+        </p>
+        <button
+          type="button"
+          onClick={onReiniciar}
+          className="mt-6 text-[13px] font-semibold text-azure underline-offset-4 hover:underline"
+        >
+          Usar otro documento
+        </button>
       </div>
     );
   }
@@ -133,147 +223,105 @@ export function PagoForm() {
     <form
       onSubmit={onSubmit}
       encType="multipart/form-data"
-      className="flex flex-col gap-4 rounded-3xl bg-white p-6 sm:p-8"
+      className="flex flex-col gap-5 rounded-3xl bg-white p-6 sm:p-8"
     >
+      <input type="hidden" name="documento" value={documento} />
+
+      <div className="rounded-2xl border border-navy/10 bg-ice/40 p-4 sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-[12px] font-semibold tracking-[0.08em] text-ink-soft uppercase">
+            Tu reserva
+          </p>
+          <button
+            type="button"
+            onClick={onReiniciar}
+            className="text-[12.5px] font-semibold text-azure underline-offset-4 hover:underline"
+          >
+            No soy yo · otro documento
+          </button>
+        </div>
+        {errors.documento && <p className={errorClass}>{errors.documento}</p>}
+
+        <dl className="mt-3 flex flex-col gap-3">
+          {CAMPOS.map(({ campo, etiqueta, tipo, max, ayuda }) => (
+            <div key={campo}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <dt className="text-[12.5px] text-ink-soft">{etiqueta}</dt>
+                <button
+                  type="button"
+                  onClick={() => setCorregir((c) => ({ ...c, [campo]: !c[campo] }))}
+                  className="text-[12px] font-semibold text-azure"
+                >
+                  {corregir[campo] ? "Dejarlo así" : "Corregir"}
+                </button>
+              </div>
+              <dd className="font-mono text-[14px] text-navy">{consulta[campo] || "—"}</dd>
+              {corregir[campo] && (
+                <>
+                  <input
+                    name={campo}
+                    type={tipo}
+                    required
+                    maxLength={max}
+                    placeholder={ayuda}
+                    aria-label={ayuda}
+                    aria-invalid={Boolean(errors[campo])}
+                    className={`${inputClass} mt-2`}
+                  />
+                  {errors[campo] && <p className={errorClass}>{errors[campo]}</p>}
+                </>
+              )}
+            </div>
+          ))}
+        </dl>
+
+        <p className="mt-4 rounded-xl bg-cream px-4 py-3 text-[12.5px] leading-relaxed text-navy">
+          El nombre es el que se imprime en tu certificado. Si ves un error, toca «Corregir» y
+          escríbelo completo, tal como debe salir.
+        </p>
+        <p className="mt-3 text-[13px] text-ink">
+          Llevas pagado <strong>{consulta.pagado}%</strong>
+          {consulta.enRevision > 0 && (
+            <>
+              {" "}
+              · <strong>{consulta.enRevision}%</strong> en revisión
+            </>
+          )}
+          .
+        </p>
+      </div>
+
       <fieldset>
-        <legend className={labelClass}>¿Qué pagaste?</legend>
+        <legend className={labelClass}>¿Cuánto pagaste ahora?</legend>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {KINDS.filter((k) => k.value !== "deposit" || aceptaAbono).map((k) => (
+          {consulta.opciones.map((o) => (
             <label
-              key={k.value}
+              key={o.porcentaje}
               className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3.5 transition-colors duration-200 ${
-                kind === k.value ? "border-azure bg-ice/40" : "border-navy/15 hover:border-navy/30"
+                porcentaje === o.porcentaje ? "border-azure bg-ice/40" : "border-navy/15 hover:border-navy/30"
               }`}
             >
               <input
                 type="radio"
-                name="kind"
-                value={k.value}
-                checked={kind === k.value}
-                onChange={() => setKind(k.value)}
+                name="porcentaje"
+                value={o.porcentaje}
+                checked={porcentaje === o.porcentaje}
+                onChange={() => setPorcentaje(o.porcentaje)}
                 className="mt-1 accent-azure"
               />
               <span>
-                <span className="block text-[14px] font-semibold text-navy">{k.title}</span>
-                <span className="block text-[12.5px] text-ink-soft">{k.desc}</span>
+                <span className="block text-[14px] font-semibold text-navy">{o.etiqueta}</span>
+                {consulta.monto !== null && consulta.moneda && (
+                  <span className="block text-[12.5px] text-ink-soft">
+                    {formatPrice(montoDePorcentaje(consulta.monto, o.porcentaje), consulta.moneda)}
+                  </span>
+                )}
               </span>
             </label>
           ))}
         </div>
-        {errors.kind && <p className={errorClass}>{errors.kind}</p>}
+        {errors.porcentaje && <p className={errorClass}>{errors.porcentaje}</p>}
       </fieldset>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field id="pago-name" label="Nombre completo" error={errors.name}>
-          <input
-            id="pago-name"
-            name="name"
-            required
-            type="text"
-            autoComplete="name"
-            maxLength={120}
-            placeholder="Como aparece en tu documento"
-            aria-invalid={Boolean(errors.name)}
-            className={inputClass}
-          />
-        </Field>
-
-        <Field id="pago-document" label="Número de documento" error={errors.document}>
-          <input
-            id="pago-document"
-            name="document"
-            required
-            type="text"
-            maxLength={30}
-            placeholder="Cédula o pasaporte"
-            aria-invalid={Boolean(errors.document)}
-            className={inputClass}
-          />
-        </Field>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field id="pago-email" label="Email" error={errors.email}>
-          <input
-            id="pago-email"
-            name="email"
-            required
-            type="email"
-            autoComplete="email"
-            maxLength={160}
-            placeholder="nombre@correo.com"
-            aria-invalid={Boolean(errors.email)}
-            className={inputClass}
-          />
-        </Field>
-
-        <Field id="pago-phone" label="WhatsApp" error={errors.phone}>
-          <input
-            id="pago-phone"
-            name="phone"
-            required
-            type="tel"
-            autoComplete="tel"
-            maxLength={40}
-            placeholder="+57 300 000 0000"
-            aria-invalid={Boolean(errors.phone)}
-            className={inputClass}
-          />
-        </Field>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field id="pago-city" label="Ciudad" error={errors.city}>
-          <input
-            id="pago-city"
-            name="city"
-            required
-            type="text"
-            autoComplete="address-level2"
-            maxLength={80}
-            placeholder="Maracaibo"
-            aria-invalid={Boolean(errors.city)}
-            className={inputClass}
-          />
-        </Field>
-
-        <Field id="pago-profession" label="Profesión o especialidad" error={errors.profession}>
-          <input
-            id="pago-profession"
-            name="profession"
-            required
-            type="text"
-            maxLength={120}
-            placeholder="Anestesiólogo"
-            aria-invalid={Boolean(errors.profession)}
-            className={inputClass}
-          />
-        </Field>
-      </div>
-
-      <div>
-        <Field
-          id="pago-reference"
-          label="¿Ya tenías referencia de reserva? (opcional)"
-          error={errors.reference}
-        >
-          <input
-            id="pago-reference"
-            name="reference"
-            type="text"
-            maxLength={20}
-            autoCapitalize="characters"
-            placeholder="STA-XXXXXXXX"
-            aria-invalid={Boolean(errors.reference)}
-            className={`${inputClass} font-mono uppercase placeholder:normal-case`}
-          />
-        </Field>
-        {!errors.reference && (
-          <p className="mt-1.5 text-[12px] text-ink-soft">
-            Si la dejas vacía, te asignamos tu número de reserva al registrar el pago.
-          </p>
-        )}
-      </div>
 
       <div>
         <span className={labelClass}>Captura o comprobante de pago</span>
@@ -313,25 +361,29 @@ export function PagoForm() {
         {errors.proof && <p className={errorClass}>{errors.proof}</p>}
       </div>
 
-      <Field id="pago-notes" label="Comentario (opcional)" error={errors.notes}>
+      <div>
+        <label htmlFor="pago-notas" className={labelClass}>
+          Comentario (opcional)
+        </label>
         <textarea
-          id="pago-notes"
-          name="notes"
+          id="pago-notas"
+          name="notas"
           rows={2}
           maxLength={800}
           placeholder="Banco, fecha de la transferencia, a nombre de quién salió el pago…"
           className={`${inputClass} resize-y`}
         />
-      </Field>
+        {errors.notas && <p className={errorClass}>{errors.notas}</p>}
+      </div>
 
-      {aceptaAbono && kind === "deposit" && (
+      {parcial && (
         <div>
           <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-cream px-4 py-3.5 text-[12.5px] leading-relaxed text-navy">
             <input type="checkbox" name="policy" className="mt-0.5 accent-azure" />
             <span>
-              Entiendo que si no pago a tiempo el 50% restante{" "}
-              <strong>no hay reembolso del abono</strong>, porque ese 50% cubre los gastos
-              operativos del taller.
+              Entiendo que si no completo el pago a tiempo{" "}
+              <strong>no hay reembolso de lo abonado</strong>, porque cubre los gastos operativos
+              del taller.
             </span>
           </label>
           {errors.policy && <p className={errorClass}>{errors.policy}</p>}
@@ -365,11 +417,7 @@ export function PagoForm() {
         </div>
       )}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="mt-1 inline-flex cursor-pointer items-center justify-center gap-2.5 rounded-xl bg-navy py-4 text-[14.5px] font-semibold text-white transition-colors duration-300 hover:bg-azure disabled:cursor-wait disabled:opacity-60"
-      >
+      <button type="submit" disabled={pending} className={botonClass}>
         {pending ? "Subiendo comprobante…" : "Registrar mi pago"}
       </button>
     </form>
@@ -378,7 +426,11 @@ export function PagoForm() {
 
 export function PagoSection() {
   const taller = useTaller();
-  const aceptaAbono = taller.porcentajesPago.includes(50);
+  const aceptaParcial = taller.porcentajesPago.some((p) => p < 100);
+  // Cambiar la `key` remonta el formulario: es la forma de volver al paso 1
+  // (useActionState no tiene un «reset»).
+  const [vuelta, setVuelta] = useState(0);
+
   return (
     <section
       id="registro-pago"
@@ -402,17 +454,14 @@ export function PagoSection() {
 
           <Reveal delay={0.12}>
             <p className="mt-5 max-w-[420px] text-[15px] leading-[1.8] text-ice/80">
-              {aceptaAbono
-                ? "Si ya hiciste el abono del 50% o pagaste el taller completo, envíanos tus datos con la captura o el comprobante de la transferencia."
-                : "Si ya pagaste el taller completo, envíanos tus datos con la captura o el comprobante de la transferencia."}{" "}
-              Al registrarlo te
-              asignamos tu número de reserva, y te confirmamos el cupo por WhatsApp cuando
-              verifiquemos el pago.
+              Escribe el documento con el que reservaste, confirma tus datos y sube la captura o
+              el comprobante de la transferencia. Te avisamos por WhatsApp cuando verifiquemos
+              el pago.
             </p>
           </Reveal>
 
-          {aceptaAbono && (
-          <Reveal delay={0.18}>
+          {aceptaParcial && (
+            <Reveal delay={0.18}>
               <div className="mt-8 max-w-[440px] rounded-2xl border border-white/20 bg-white/[0.06] p-5">
                 <p className="flex items-center gap-2.5 text-[13px] font-semibold tracking-[0.06em] text-sky uppercase">
                   <span className="block size-1.5 rounded-full bg-sky" />
@@ -425,7 +474,7 @@ export function PagoSection() {
         </div>
 
         <Reveal delay={0.15}>
-          <PagoForm />
+          <PagoForm key={vuelta} onReiniciar={() => setVuelta((v) => v + 1)} />
         </Reveal>
       </div>
     </section>

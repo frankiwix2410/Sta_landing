@@ -125,7 +125,7 @@ const contenido = {
     },
     {
       q: "¿Cómo se confirma mi cupo?",
-      a: "Al enviar el formulario generamos tu reserva con un número de referencia y te contactamos por WhatsApp para cerrar el pago. Cuando pagues —abono del 50% o pago completo— sube tu comprobante en «Registrar pago»: ahí te asignamos tu número de reserva si aún no lo tenías. El cupo queda confirmado cuando verificamos el pago.",
+      a: "Al enviar el formulario con tu número de documento generamos tu reserva y te contactamos por WhatsApp para cerrar el pago. Cuando pagues, entra en «Registrar pago», escribe el mismo documento y sube el comprobante. El cupo queda confirmado cuando verificamos el pago.",
     },
     {
       q: "¿Me devuelven el abono si no completo el pago?",

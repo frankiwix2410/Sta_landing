@@ -22,6 +22,8 @@ export type OrderDraft = {
   price: Money | null;
   customer: {
     name: string;
+    /** "CC 1136882468": identifica a la persona en toda la plataforma. */
+    document: string;
     email: string;
     phone: string;
     city: string;

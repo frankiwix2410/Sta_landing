@@ -1,9 +1,18 @@
 "use server";
 
+import { headers } from "next/headers";
 import { getPaymentProvider, type CheckoutResult, type Money, type OrderDraft } from "@/lib/payments";
-import { saveReservation } from "@/lib/reservations";
-import { savePaymentProof, sniffProof, type ProofFile } from "@/lib/reservations/payment-proofs";
-import { PROOF_MAX_BYTES, type PaymentKind } from "@/lib/reservations/types";
+import { guardarComprobante } from "@/lib/inscripciones/comprobantes";
+import { respuestaConsulta, type ConsultaPago } from "@/lib/inscripciones/consulta";
+import { documentoValido, normalizarDocumento } from "@/lib/inscripciones/documento";
+import { MENSAJES_INSCRIPCION } from "@/lib/inscripciones/errores";
+import { leerCorrecciones, leerPersonaForm, MAX } from "@/lib/inscripciones/formulario";
+import { porcentajeValido } from "@/lib/inscripciones/pagos";
+import { consultarInscripcion, crearInscripcion } from "@/lib/inscripciones/repo";
+import type { DatosPersona } from "@/lib/inscripciones/tipos";
+import { crearLimitador, ipDeCabeceras } from "@/lib/limite";
+import { sniffProof, type ProofFile } from "@/lib/reservations/payment-proofs";
+import { PROOF_MAX_BYTES } from "@/lib/reservations/types";
 import { tallerWaLink } from "@/lib/taller";
 import { cargarTallerPublico } from "@/lib/talleres/publico";
 import { nombreCurso, tarifaPorDefecto, type TallerVista } from "@/lib/talleres/vista";
@@ -13,9 +22,9 @@ export type ReserveState =
   | { status: "error"; errors: Record<string, string>; message?: string }
   /** No quedan plazas (o las reservas están cerradas): se ofrece lista de espera. */
   | { status: "sold_out"; message: string; handoffUrl: string }
+  /** Ese documento ya tiene reserva en este taller. */
+  | { status: "ya_inscrito"; message: string }
   | { status: "ok"; result: CheckoutResult };
-
-const MAX = { name: 120, document: 30, email: 160, phone: 40, city: 80, profession: 120, notes: 800 };
 
 function str(formData: FormData, key: string) {
   const v = formData.get(key);
@@ -51,83 +60,61 @@ async function tallerActivo(): Promise<
   };
 }
 
-function waitlistMessage(t: TallerVista, customer: { name: string; email: string; city: string; profession: string }) {
+function waitlistMessage(
+  t: TallerVista,
+  p: Pick<DatosPersona, "nombre" | "email" | "ciudad" | "profesion">,
+) {
   return tallerWaLink(
     [
       `Hola, quiero entrar en la lista de espera del ${nombreCurso(t)}.`,
       "",
-      `Nombre: ${customer.name}`,
-      `Email: ${customer.email}`,
-      `Ciudad: ${customer.city}`,
-      `Profesión: ${customer.profession}`,
+      `Nombre: ${p.nombre}`,
+      `Email: ${p.email ?? ""}`,
+      `Ciudad: ${p.ciudad ?? ""}`,
+      `Profesión: ${p.profesion ?? ""}`,
     ].join("\n"),
   );
 }
 
 /**
- * Lee y valida los datos de contacto que comparten la reserva y el registro de
- * pago. Los errores se escriben en `errors` con el nombre del campo.
+ * Consultas por documento (buscar la reserva, registrar el pago, buscar
+ * certificados): como mucho 12 cada 10 minutos por IP. Frena a quien prueba
+ * documentos para ver quién está inscrito; a una persona real le sobra.
  */
-function readCustomer(formData: FormData, errors: Record<string, string>) {
-  const name = str(formData, "name");
-  const email = str(formData, "email");
-  const phone = str(formData, "phone");
-  const city = str(formData, "city");
-  const profession = str(formData, "profession");
-  const notes = str(formData, "notes");
+const limitador = crearLimitador({ max: 12, ventanaMs: 10 * 60 * 1000 });
 
-  if (name.length < 3) errors.name = "Escribe tu nombre completo.";
-  else if (name.length > MAX.name) errors.name = "Nombre demasiado largo.";
-
-  // Validación deliberadamente laxa: rechazar direcciones raras pero válidas es
-  // peor que dejar pasar una errata, porque cada reserva se confirma a mano.
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) || email.length > MAX.email)
-    errors.email = "Escribe un email válido.";
-
-  const digits = phone.replace(/\D/g, "");
-  if (digits.length < 7 || digits.length > 15 || phone.length > MAX.phone)
-    errors.phone = "Escribe un teléfono válido con indicativo.";
-
-  if (city.length < 2) errors.city = "Indica tu ciudad.";
-  else if (city.length > MAX.city) errors.city = "Ciudad demasiado larga.";
-
-  if (profession.length < 2) errors.profession = "Indica tu profesión o especialidad.";
-  else if (profession.length > MAX.profession) errors.profession = "Texto demasiado largo.";
-
-  if (notes.length > MAX.notes) errors.notes = "El mensaje supera los 800 caracteres.";
-
-  return { customer: { name, email, phone, city, profession }, notes };
+async function dentroDelLimite() {
+  return limitador.permitir(ipDeCabeceras(await headers()));
 }
 
 /**
- * Crea la reserva y arranca el cobro.
+ * Crea la inscripción y arranca el cobro.
  *
  * Un server action es un endpoint POST público: cualquiera puede llamarlo sin
  * pasar por el formulario, así que todo se valida aquí y el importe se lee del
- * catálogo del servidor, nunca del `formData`.
+ * taller en la base, nunca del `formData`.
  */
 export async function createReservation(
   _prev: ReserveState,
   formData: FormData,
 ): Promise<ReserveState> {
-  const errors: Record<string, string> = {};
-  const { customer, notes } = readCustomer(formData, errors);
-
+  const lectura = leerPersonaForm(formData, "publico");
+  const errors: Record<string, string> = lectura.ok ? {} : { ...lectura.errores };
   if (formData.get("consent") !== "on")
     errors.consent = "Necesitamos tu autorización para contactarte.";
+  if (!lectura.ok || Object.keys(errors).length > 0) return { status: "error", errors };
+  const { datos, notas } = lectura;
 
-  if (Object.keys(errors).length > 0) {
-    return { status: "error", errors };
-  }
+  // «Ya tienes una reserva» se responde por documento: sin límite sería otra
+  // forma de averiguar quién está inscrito.
+  if (!(await dentroDelLimite()))
+    return { status: "error", errors: {}, message: MENSAJES_INSCRIPCION.limite };
 
   const activo = await tallerActivo();
-  if (!activo.taller) {
-    return { status: "error", errors: {}, message: activo.mensaje };
-  }
+  if (!activo.taller) return { status: "error", errors: {}, message: activo.mensaje };
   const t = activo.taller;
 
-  // La página puede estar cacheada: se vuelve a comprobar aquí porque un
-  // server action es un endpoint público.
+  // La página puede estar cacheada: se vuelve a comprobar aquí.
   if (t.estado === "finalizado") {
     return { status: "error", errors: {}, message: "Esta edición ya finalizó." };
   }
@@ -139,35 +126,76 @@ export async function createReservation(
         t.estado === "publicado"
           ? "Los cupos de esta edición se agotaron."
           : "Se vendieron todos los cupos de esta edición.",
-      handoffUrl: waitlistMessage(t, customer),
+      handoffUrl: waitlistMessage(t, datos),
     };
   }
 
   const tier = tarifaPorDefecto(t);
+  const price = currentPrice(t);
+  const referencia = newReference();
+
+  // Guardar es también reclamar el cupo: la base rechaza si se llenó o se cerró.
+  const creada = await crearInscripcion({
+    tallerId: t.id,
+    referencia,
+    persona: datos,
+    tarifa: { id: tier.id, nombre: tier.name },
+    monto: price?.amount ?? null,
+    moneda: price?.currency ?? null,
+    notas,
+    origen: "web",
+    forzarCupo: false,
+  });
+
+  if (!creada.ok) {
+    switch (creada.motivo) {
+      case "ya_inscrito":
+        return {
+          status: "ya_inscrito",
+          message:
+            "Ya tienes una reserva en este taller con ese documento: no hace falta reservar otra vez. Si ya pagaste, registra tu comprobante.",
+        };
+      case "sin_cupos":
+      case "cerrado":
+        return {
+          status: "sold_out",
+          message:
+            creada.motivo === "cerrado"
+              ? "Las reservas de esta edición están cerradas."
+              : "Los cupos de esta edición se agotaron mientras completabas el formulario.",
+          handoffUrl: waitlistMessage(t, datos),
+        };
+      case "documento_invalido":
+        return { status: "error", errors: { documento: MENSAJES_INSCRIPCION.documento_invalido } };
+      default:
+        // Sin conexión o fallo de la base: la reserva no quedó guardada (repo.ts
+        // la deja en los logs), pero la persona sigue por WhatsApp con su
+        // referencia, como siempre.
+        console.error("[taller] la reserva no quedó en la base; sigue por WhatsApp", {
+          motivo: creada.motivo,
+          referencia,
+          persona: datos,
+          notas,
+        });
+    }
+  }
+
   const order: OrderDraft = {
-    reference: newReference(),
+    reference: creada.ok ? creada.valor.referencia : referencia,
     courseName: nombreCurso(t),
     tierId: tier.id,
     tierName: tier.name,
-    // El precio sale del taller en la base, nunca del formulario.
-    price: currentPrice(t),
-    customer,
-    notes,
+    price,
+    customer: {
+      name: datos.nombre,
+      document: `${datos.tipoDocumento} ${datos.documento}`,
+      email: datos.email ?? "",
+      phone: datos.telefono ?? "",
+      city: datos.ciudad ?? "",
+      profession: datos.profesion ?? "",
+    },
+    notes: notas,
   };
-
-  // Guardar es también reclamar el cupo: la base rechaza si se llenó o se cerró.
-  const saved = await saveReservation(t.slug, order);
-
-  if (saved.kind === "sold_out" || saved.kind === "closed") {
-    return {
-      status: "sold_out",
-      message:
-        saved.kind === "closed"
-          ? "Las reservas de esta edición están cerradas."
-          : "Los cupos de esta edición se agotaron mientras completabas el formulario.",
-      handoffUrl: waitlistMessage(t, customer),
-    };
-  }
 
   try {
     const result = await getPaymentProvider().createCheckout(order);
@@ -185,60 +213,89 @@ export async function createReservation(
 
 /* ------------------------------------------------------- Registro de pago */
 
+export type ConsultaState =
+  | { status: "idle" }
+  | { status: "error"; message: string; sinReserva?: boolean }
+  | { status: "ok"; documento: string; consulta: ConsultaPago };
+
+/**
+ * Paso 1 del pago: ¿hay una reserva activa con este documento?
+ *
+ * Devuelve los datos enmascarados y los porcentajes que se pueden pagar. No
+ * entrega ningún token: el paso 2 vuelve a comprobarlo todo.
+ */
+export async function buscarInscripcion(
+  _prev: ConsultaState,
+  formData: FormData,
+): Promise<ConsultaState> {
+  const documento = normalizarDocumento(str(formData, "documento"));
+  if (!documentoValido(documento))
+    return { status: "error", message: "Escribe tu número de documento (cédula o pasaporte)." };
+  if (!(await dentroDelLimite())) return { status: "error", message: MENSAJES_INSCRIPCION.limite };
+
+  const activo = await tallerActivo();
+  if (!activo.taller) return { status: "error", message: activo.mensaje };
+  const t = activo.taller;
+  if (!t.mostrar.pago) {
+    return {
+      status: "error",
+      message: "El registro de pagos de esta edición está cerrado. Escríbenos por WhatsApp.",
+    };
+  }
+
+  const r = await consultarInscripcion(t.id, documento);
+  if (!r.ok) return { status: "error", message: MENSAJES_INSCRIPCION[r.motivo] };
+  if (!r.valor) {
+    return {
+      status: "error",
+      message:
+        "No encontramos una reserva con ese documento en esta edición. Revisa el número o reserva tu cupo primero.",
+      sinReserva: true,
+    };
+  }
+
+  return {
+    status: "ok",
+    documento,
+    consulta: respuestaConsulta(r.valor, t.porcentajesPago, t.pricing.published),
+  };
+}
+
 export type PaymentState =
   | { status: "idle" }
   | { status: "error"; errors: Record<string, string>; message?: string; handoffUrl?: string }
-  /** `reference` es el número de reserva: el que ya tenía o el recién asignado. */
-  | { status: "ok"; kind: PaymentKind; reference: string; handoffUrl: string };
-
-const KIND_LABEL: Record<PaymentKind, string> = {
-  deposit: "abono del 50%",
-  full: "pago completo",
-};
+  | { status: "ok"; porcentaje: number; referencia: string; completo: boolean; handoffUrl: string };
 
 /**
- * Registra el comprobante de quien ya pagó el abono o el taller completo y le
- * asigna su número de reserva.
+ * Paso 2: registra el comprobante.
  *
- * Si la persona escribe la referencia de una reserva previa, el pago se cuelga
- * de esa; si no, se crea la reserva en el mismo paso. En ambos casos queda
- * `pending`: el cupo se confirma a mano al revisar el comprobante.
+ * Todo se valida otra vez (taller abierto, reserva activa, porcentaje
+ * permitido y dentro del saldo) y la base lo repite dentro de su transacción.
+ * Los datos que la persona reescribió se corrigen en su ficha.
  */
-export async function registerPayment(
+export async function registrarPago(
   _prev: PaymentState,
   formData: FormData,
 ): Promise<PaymentState> {
   const errors: Record<string, string> = {};
-  const { customer, notes } = readCustomer(formData, errors);
 
-  // El documento solo se pide aquí: la reserva sin pago se cierra por WhatsApp,
-  // pero un comprobante hay que poder cruzarlo con quien hizo la transferencia.
-  const document = str(formData, "document").replace(/\s+/g, " ");
-  // Validación laxa a propósito: conviven cédulas, pasaportes y documentos de
-  // otros países, con o sin puntos, guiones o prefijo de nacionalidad.
-  const documentChars = document.replace(/[^\p{L}\p{N}]/gu, "");
-  if (documentChars.length < 5 || document.length > MAX.document)
-    errors.document = "Escribe tu número de documento (cédula o pasaporte).";
+  const documento = normalizarDocumento(str(formData, "documento"));
+  if (!documentoValido(documento)) errors.documento = "Vuelve al paso anterior y escribe tu documento.";
 
-  const rawKind = str(formData, "kind");
-  const kind: PaymentKind | null = rawKind === "deposit" || rawKind === "full" ? rawKind : null;
+  const correcciones = leerCorrecciones(formData, errors);
 
-  let reference = str(formData, "reference").toUpperCase().replace(/\s/g, "");
-  if (/^[A-Z0-9]{8}$/.test(reference)) reference = `STA-${reference}`;
+  const porcentaje = Number(str(formData, "porcentaje"));
+  if (!Number.isInteger(porcentaje) || porcentaje <= 0 || porcentaje > 100)
+    errors.porcentaje = "Elige cuánto pagaste.";
 
-  if (reference && !/^STA-[A-Z0-9]{8}$/.test(reference))
-    errors.reference = "La referencia tiene el formato STA-XXXXXXXX. Si no la tienes, déjala vacía.";
-
-  if (!kind) errors.kind = "Indica si pagaste el abono o el taller completo.";
-  if (kind === "deposit" && formData.get("policy") !== "on")
-    errors.policy = "Debes aceptar la condición del abono para registrarlo.";
+  const notas = str(formData, "notas");
+  if (notas.length > MAX.notas) errors.notas = "El comentario supera los 800 caracteres.";
 
   if (formData.get("consent") !== "on")
     errors.consent = "Necesitamos tu autorización para verificar el pago.";
 
   const upload = formData.get("proof");
   let file: ProofFile | null = null;
-
   if (!(upload instanceof File) || upload.size === 0) {
     errors.proof = "Sube la captura o el comprobante de pago.";
   } else if (upload.size > PROOF_MAX_BYTES) {
@@ -250,93 +307,91 @@ export async function registerPayment(
     else errors.proof = "Formato no válido. Sube una imagen (JPG, PNG, HEIC) o un PDF.";
   }
 
+  if (Object.keys(errors).length > 0 || !file) return { status: "error", errors };
+  if (!(await dentroDelLimite()))
+    return { status: "error", errors: {}, message: MENSAJES_INSCRIPCION.limite };
+
   const activo = await tallerActivo();
-  const t = activo.taller;
-
-  if (t && kind === "deposit" && !t.porcentajesPago.includes(50))
-    errors.kind = "Este taller solo acepta el pago completo.";
-
-  if (Object.keys(errors).length > 0 || !kind || !file) {
-    return { status: "error", errors };
-  }
-
-  if (!t || !t.mostrar.pago) {
+  if (!activo.taller) {
     return {
       status: "error",
       errors: {},
-      message: activo.taller
-        ? "El registro de pagos de esta edición está cerrado. Envíanos tu comprobante por WhatsApp y lo resolvemos."
-        : activo.mensaje,
-      handoffUrl: tallerWaLink(
-        `Hola, quiero registrar un pago. Nombre: ${customer.name}. Documento: ${document}.`,
-      ),
+      message: activo.mensaje,
+      handoffUrl: tallerWaLink(`Hola, quiero registrar un pago. Documento: ${documento}.`),
     };
   }
-  const tier = tarifaPorDefecto(t);
+  const t = activo.taller;
 
-  const handoff = (assigned: string | null) =>
+  const handoff = (referencia: string | null) =>
     tallerWaLink(
       [
-        `Hola, registré mi ${KIND_LABEL[kind]} del ${nombreCurso(t)}.`,
+        `Hola, registré un pago del ${porcentaje}% del ${nombreCurso(t)}.`,
         "",
-        ...(assigned ? [`Número de reserva: ${assigned}`] : []),
-        `Nombre: ${customer.name}`,
-        `Documento: ${document}`,
-        `Email: ${customer.email}`,
-        `Teléfono: ${customer.phone}`,
+        ...(referencia ? [`Número de reserva: ${referencia}`] : []),
+        `Documento: ${documento}`,
       ].join("\n"),
     );
 
-  const saved = await savePaymentProof({
-    edition: t.slug,
-    kind,
-    existingReference: reference || null,
-    newReference: newReference(),
-    tierId: tier.id,
-    tierName: tier.name,
-    price: currentPrice(t),
-    customer: { ...customer, document },
-    notes,
-    file,
+  if (!t.mostrar.pago) {
+    return {
+      status: "error",
+      errors: {},
+      message:
+        "El registro de pagos de esta edición está cerrado. Envíanos tu comprobante por WhatsApp y lo resolvemos.",
+      handoffUrl: handoff(null),
+    };
+  }
+
+  // Se consulta de nuevo: entre un paso y otro pudo subirse otro comprobante
+  // (otra pestaña) y el paso 1 no deja ningún token de confianza.
+  const consulta = await consultarInscripcion(t.id, documento);
+  if (!consulta.ok) {
+    return { status: "error", errors: {}, message: MENSAJES_INSCRIPCION[consulta.motivo], handoffUrl: handoff(null) };
+  }
+  if (!consulta.valor) {
+    return { status: "error", errors: {}, message: MENSAJES_INSCRIPCION.sin_inscripcion };
+  }
+
+  const pagado = consulta.valor.porcentaje_pagado;
+  const enRevision = consulta.valor.porcentaje_en_revision;
+  if (!porcentajeValido(porcentaje, t.porcentajesPago, pagado, enRevision)) {
+    return { status: "error", errors: { porcentaje: MENSAJES_INSCRIPCION.porcentaje_no_permitido } };
+  }
+  if (pagado + enRevision + porcentaje < 100 && formData.get("policy") !== "on") {
+    return { status: "error", errors: { policy: "Debes aceptar la condición del abono para registrarlo." } };
+  }
+
+  const guardado = await guardarComprobante({
+    tallerId: t.id,
+    tallerSlug: t.slug,
+    documento,
+    porcentaje,
+    correcciones,
+    notas,
+    archivo: file,
   });
 
-  switch (saved.kind) {
-    case "saved":
-      return {
-        status: "ok",
-        kind,
-        reference: saved.reference,
-        handoffUrl: handoff(saved.reference),
-      };
-
-    case "unknown_reference":
-      return {
-        status: "error",
-        errors: {
-          reference:
-            "No encontramos una reserva activa con esa referencia. Revísala o déjala vacía y te asignamos un número nuevo.",
-        },
-      };
-
-    case "sold_out":
-    case "closed":
-      return {
-        status: "error",
-        errors: {},
-        message:
-          saved.kind === "sold_out"
-            ? "Los cupos de esta edición se agotaron y no pudimos asignarte un número de reserva. Escríbenos por WhatsApp con tu comprobante y lo resolvemos."
-            : "Las reservas de esta edición están cerradas. Escríbenos por WhatsApp con tu comprobante y lo resolvemos.",
-        handoffUrl: handoff(null),
-      };
-
-    default:
-      return {
-        status: "error",
-        errors: {},
-        message:
-          "No pudimos recibir tu comprobante. Envíanoslo por WhatsApp y lo registramos a mano.",
-        handoffUrl: handoff(reference || null),
-      };
+  if (guardado.ok) {
+    return {
+      status: "ok",
+      porcentaje,
+      referencia: guardado.valor.referencia,
+      completo: pagado + guardado.valor.enRevision >= 100,
+      handoffUrl: handoff(guardado.valor.referencia),
+    };
   }
+
+  const motivo = guardado.motivo;
+  if (motivo === "porcentaje_no_permitido" || motivo === "sin_saldo") {
+    return { status: "error", errors: { porcentaje: MENSAJES_INSCRIPCION[motivo] } };
+  }
+  return {
+    status: "error",
+    errors: {},
+    message:
+      motivo === "error" || motivo === "sin_conexion"
+        ? "No pudimos recibir tu comprobante. Envíanoslo por WhatsApp y lo registramos a mano."
+        : MENSAJES_INSCRIPCION[motivo],
+    handoffUrl: handoff(null),
+  };
 }

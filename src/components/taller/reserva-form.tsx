@@ -1,11 +1,10 @@
 "use client";
 
-import { useActionState } from "react";
+import { startTransition, useActionState } from "react";
 import { createReservation, type ReserveState } from "@/app/taller/actions";
 import { Reveal } from "@/components/ui/motion-primitives";
 import { WhatsAppIcon } from "@/components/ui/icons";
-// Desde `types` y no desde `@/lib/reservations`: ese barrel arrastra el cliente
-// de Supabase, que no debe entrar en el bundle del navegador.
+import { TIPOS_DOCUMENTO, TIPO_DOCUMENTO_ETIQUETA } from "@/lib/inscripciones/tipos";
 import { tallerWaLink } from "@/lib/taller";
 import { useTaller } from "@/lib/talleres/contexto";
 import { nombreCurso, type TallerVista } from "@/lib/talleres/vista";
@@ -85,8 +84,38 @@ export function ReservaForm() {
 
   const errors = state.status === "error" ? state.errors : {};
 
+  /**
+   * Se despacha a mano y no con `<form action>`: React 19 vacía el formulario
+   * tras cada acción, y un error de validación borraría todo lo escrito.
+   */
+  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    startTransition(() => formAction(formData));
+  }
+
   if (state.status === "sold_out") {
     return <SoldOutPanel message={state.message} handoffUrl={state.handoffUrl} />;
+  }
+
+  if (state.status === "ya_inscrito") {
+    return (
+      <div className="rounded-3xl bg-cream p-6 text-center sm:p-10">
+        <span className="mx-auto flex size-14 items-center justify-center rounded-full bg-azure/15 text-3xl">
+          ✓
+        </span>
+        <h3 className="mt-5 text-[26px] text-navy">Ya tienes una reserva</h3>
+        <p className="mt-3 text-[15px] leading-[1.8] text-ink">{state.message}</p>
+        {taller.mostrar.pago && (
+          <a
+            href="#registro-pago"
+            className="mt-7 inline-flex w-full items-center justify-center rounded-xl bg-navy py-4 text-[14.5px] font-semibold text-white transition-colors duration-300 hover:bg-azure"
+          >
+            Registrar mi pago
+          </a>
+        )}
+      </div>
+    );
   }
 
   // Edición llena declarada en el catálogo: manda sobre el conteo de la base,
@@ -144,27 +173,60 @@ export function ReservaForm() {
           )}
         </a>
         <p className="mt-4 text-[11.5px] text-ink-soft">
-          Guarda tu referencia: la necesitamos para confirmar el cupo.
+          Para registrar tu pago y descargar tu certificado solo necesitas tu número de documento.
         </p>
       </div>
     );
   }
 
   return (
-    <form action={formAction} className="flex flex-col gap-4 rounded-3xl bg-cream p-6 sm:p-8">
-      <Field id="name" label="Nombre completo" error={errors.name}>
-        <input
-          id="name"
-          name="name"
-          required
-          type="text"
-          autoComplete="name"
-          maxLength={120}
-          placeholder="Tu nombre y apellido"
-          aria-invalid={Boolean(errors.name)}
-          className={inputClass}
-        />
-      </Field>
+    <form onSubmit={onSubmit} className="flex flex-col gap-4 rounded-3xl bg-cream p-6 sm:p-8">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-[12rem_1fr]">
+        <Field id="tipo_documento" label="Tipo de documento">
+          <select id="tipo_documento" name="tipo_documento" defaultValue="CC" className={inputClass}>
+            {TIPOS_DOCUMENTO.map((t) => (
+              <option key={t} value={t}>
+                {TIPO_DOCUMENTO_ETIQUETA[t]}
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        <Field id="documento" label="Número de documento" error={errors.documento}>
+          <input
+            id="documento"
+            name="documento"
+            required
+            type="text"
+            autoComplete="off"
+            maxLength={30}
+            placeholder="Cédula o pasaporte"
+            aria-invalid={Boolean(errors.documento)}
+            className={inputClass}
+          />
+        </Field>
+      </div>
+
+      <div>
+        <Field id="nombre" label="Nombre completo" error={errors.nombre}>
+          <input
+            id="nombre"
+            name="nombre"
+            required
+            type="text"
+            autoComplete="name"
+            maxLength={120}
+            placeholder="Tu nombre y apellido"
+            aria-invalid={Boolean(errors.nombre)}
+            className={inputClass}
+          />
+        </Field>
+        {!errors.nombre && (
+          <p className="mt-1.5 text-[12px] text-ink-soft">
+            Así aparecerá en tu certificado: escríbelo completo y con tildes.
+          </p>
+        )}
+      </div>
 
       <Field id="email" label="Email" error={errors.email}>
         <input
@@ -181,52 +243,52 @@ export function ReservaForm() {
       </Field>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field id="phone" label="WhatsApp" error={errors.phone}>
+        <Field id="telefono" label="WhatsApp" error={errors.telefono}>
           <input
-            id="phone"
-            name="phone"
+            id="telefono"
+            name="telefono"
             required
             type="tel"
             autoComplete="tel"
             maxLength={40}
             placeholder="+57 300 000 0000"
-            aria-invalid={Boolean(errors.phone)}
+            aria-invalid={Boolean(errors.telefono)}
             className={inputClass}
           />
         </Field>
 
-        <Field id="city" label="Ciudad" error={errors.city}>
+        <Field id="ciudad" label="Ciudad" error={errors.ciudad}>
           <input
-            id="city"
-            name="city"
+            id="ciudad"
+            name="ciudad"
             required
             type="text"
             autoComplete="address-level2"
             maxLength={80}
             placeholder="Maracaibo"
-            aria-invalid={Boolean(errors.city)}
+            aria-invalid={Boolean(errors.ciudad)}
             className={inputClass}
           />
         </Field>
       </div>
 
-      <Field id="profession" label="Profesión o especialidad" error={errors.profession}>
+      <Field id="profesion" label="Profesión o especialidad" error={errors.profesion}>
         <input
-          id="profession"
-          name="profession"
+          id="profesion"
+          name="profesion"
           required
           type="text"
           maxLength={120}
           placeholder="Anestesiólogo · Residente de anestesiología · Médico general"
-          aria-invalid={Boolean(errors.profession)}
+          aria-invalid={Boolean(errors.profesion)}
           className={inputClass}
         />
       </Field>
 
-      <Field id="notes" label="¿Algo que debamos saber? (opcional)" error={errors.notes}>
+      <Field id="notas" label="¿Algo que debamos saber? (opcional)" error={errors.notas}>
         <textarea
-          id="notes"
-          name="notes"
+          id="notas"
+          name="notas"
           rows={3}
           maxLength={800}
           placeholder="Facturación, alimentación, nivel de experiencia con ultrasonido…"

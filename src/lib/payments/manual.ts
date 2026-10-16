@@ -18,6 +18,7 @@ export const manualProvider: PaymentProvider = {
       `Referencia: ${order.reference}`,
       `Modalidad: ${order.tierName}`,
       `Nombre: ${order.customer.name}`,
+      `Documento: ${order.customer.document}`,
       `Email: ${order.customer.email}`,
       `Teléfono: ${order.customer.phone}`,
       `Ciudad: ${order.customer.city}`,
