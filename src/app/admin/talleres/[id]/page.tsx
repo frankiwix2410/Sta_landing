@@ -53,7 +53,7 @@ export default async function EditarTallerPage({ params }: { params: Promise<{ i
             Pagos
           </Link>{" "}
           ·{" "}
-          <Link href={`/admin/certificados?taller=${taller.slug}`} className="text-azure hover:underline">
+          <Link href={`/admin/certificados?taller=${taller.id}`} className="text-azure hover:underline">
             Certificados
           </Link>
         </>

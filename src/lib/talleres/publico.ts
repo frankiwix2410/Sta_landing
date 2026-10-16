@@ -25,13 +25,6 @@ export const cargarTallerPublico = cache(async (): Promise<TallerPublico> => {
   return { kind: "ok", vista: construirTallerVista(activo.taller, activo.estadoEfectivo, disp) };
 });
 
-/** Taller con el que abre una pantalla del admin: el de la URL o el activo. */
-export async function slugParaAdmin(param: string | undefined): Promise<string | null> {
-  if (param) return param;
-  const publico = await cargarTallerPublico();
-  return publico.kind === "ok" ? publico.vista.slug : null;
-}
-
 /** Id del taller con el que abre una pantalla del admin: el de la URL o el de la página. */
 export async function tallerIdParaAdmin(param: string | undefined): Promise<string | null> {
   if (param) return param;

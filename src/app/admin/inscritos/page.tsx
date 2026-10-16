@@ -122,9 +122,20 @@ export default async function InscritosPage({ searchParams }: { searchParams: Pr
         <p className={tarjeta}>No se pudo consultar la base de datos.</p>
       ) : (
         <>
-          <p className="mb-3 text-[13px] text-ink-soft">
-            {activos.length} activos · {pagados} con el 100% · {asistieron} con asistencia
-            {lista.length > activos.length && ` · ${lista.length - activos.length} canceladas`}
+          <p className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-ink-soft">
+            <span>
+              {activos.length} activos · {pagados} con el 100% · {asistieron} con asistencia
+              {lista.length > activos.length && ` · ${lista.length - activos.length} canceladas`}
+            </span>
+            <Link href={`/admin/certificados?taller=${taller.id}`} className="font-semibold text-azure hover:underline">
+              Certificados de este taller
+            </Link>
+            <Link
+              href={`/admin/certificados/imprimir?taller=${taller.id}`}
+              className="font-semibold text-azure hover:underline"
+            >
+              Imprimir todos
+            </Link>
           </p>
           <div className="mb-3">
             <AsistenciaLote tallerId={taller.id} />

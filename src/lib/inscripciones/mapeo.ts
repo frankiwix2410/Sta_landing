@@ -70,9 +70,9 @@ export type FilaInscrito = {
   certificado_revocado?: boolean | null;
 };
 
-/** Columnas de `inscritos_admin`. La etapa 3 añade las del certificado. */
+/** Columnas de `inscritos_admin`, incluidas las del certificado (migración 20261015_02). */
 export const COLUMNAS_INSCRITO =
-  "id, referencia, taller_id, persona_id, documento, tipo_documento, nombre, email, telefono, ciudad, profesion, tarifa_nombre, monto, moneda, porcentaje_pagado, porcentaje_manual, porcentaje_en_revision, comprobantes_verificados, cancelada, asistio, origen, notas, creado_en";
+  "id, referencia, taller_id, persona_id, documento, tipo_documento, nombre, email, telefono, ciudad, profesion, tarifa_nombre, monto, moneda, porcentaje_pagado, porcentaje_manual, porcentaje_en_revision, comprobantes_verificados, cancelada, asistio, origen, notas, creado_en, certificado_codigo, certificado_revocado";
 
 export function filaAInscrito(f: FilaInscrito): Inscrito {
   return {
