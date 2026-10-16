@@ -1,9 +1,17 @@
 #!/usr/bin/env bash
-# Aplica la migración de talleres (supabase/migrations/20261013_01_talleres.sql)
-# a TU base de Supabase.
+# Aplica UNA migración de supabase/migrations/ a TU base de Supabase.
 #
 # Uso:
-#   SUPABASE_DB_URL='postgresql://postgres:TU_CLAVE@HOST:5432/postgres' ./scripts/migrar.sh
+#   SUPABASE_DB_URL='postgresql://postgres:TU_CLAVE@HOST:5432/postgres' ./scripts/migrar.sh [archivo]
+#
+#   archivo: ruta de la migración, relativa a la raíz del repo o absoluta.
+#            Sin argumento se toma la MÁS RECIENTE de supabase/migrations/
+#            (orden por nombre). Pasa siempre la ruta cuando haya una
+#            migración que todavía no toca aplicar.
+#
+# Si existe supabase/verificaciones/antes_<archivo>, se muestra antes de pedir
+# confirmación (consultas de solo lectura sobre el punto de partida). Si existe
+# supabase/verificaciones/<archivo>, se ejecuta después.
 #
 # Dónde sacar la URL: Supabase → Project Settings → Database → Connection string
 # → pestaña URI. Recomendado: el "Session pooler" (los hosts de conexión directa
@@ -16,11 +24,24 @@
 set -euo pipefail
 
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ARCHIVO="$RAIZ/supabase/migrations/20261013_01_talleres.sql"
+
+if [ $# -gt 0 ]; then
+  case "$1" in
+    /*) ARCHIVO="$1" ;;
+    *) ARCHIVO="$RAIZ/$1" ;;
+  esac
+else
+  ULTIMA="$(ls "$RAIZ/supabase/migrations" | grep '\.sql$' | sort | tail -n 1)"
+  ARCHIVO="$RAIZ/supabase/migrations/$ULTIMA"
+fi
+
+NOMBRE="$(basename "$ARCHIVO")"
+ANTES="$RAIZ/supabase/verificaciones/antes_$NOMBRE"
+DESPUES="$RAIZ/supabase/verificaciones/$NOMBRE"
 
 if [ -z "${SUPABASE_DB_URL:-}" ]; then
   echo "Error: falta SUPABASE_DB_URL." >&2
-  echo "Uso: SUPABASE_DB_URL='postgresql://...' ./scripts/migrar.sh" >&2
+  echo "Uso: SUPABASE_DB_URL='postgresql://...' ./scripts/migrar.sh [archivo]" >&2
   exit 1
 fi
 
@@ -29,7 +50,7 @@ if [ ! -f "$ARCHIVO" ]; then
   exit 1
 fi
 
-# Ejecuta SQL (por stdin) contra la base, sin mostrar nunca la URL.
+# Ejecuta SQL (por stdin o con -c) contra la base, sin mostrar nunca la URL.
 if command -v psql >/dev/null 2>&1; then
   MODO="psql local"
   correr_sql() { psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 "$@"; }
@@ -43,8 +64,14 @@ else
   exit 1
 fi
 
+if [ -f "$ANTES" ]; then
+  echo "Punto de partida (solo lectura):"
+  correr_sql < "$ANTES" || echo "(La comprobación previa falló: ¿la migración ya estaba aplicada?)"
+  echo
+fi
+
 echo "Se va a aplicar:"
-echo "  archivo: supabase/migrations/20261013_01_talleres.sql"
+echo "  archivo: ${ARCHIVO#"$RAIZ"/}"
 echo "  destino: la base indicada en SUPABASE_DB_URL (no se muestra)"
 echo "  cliente: $MODO"
 echo "La migración es idempotente y corre dentro de una transacción."
@@ -60,10 +87,11 @@ echo
 echo "Aplicando migración..."
 correr_sql < "$ARCHIVO"
 
-echo
-echo "Verificación: talleres"
-correr_sql -c "select slug, estado, titulo, titulo_acento, fecha_inicio, fecha_fin, cupos_total from public.talleres;"
-echo "Verificación: disponibilidad"
-correr_sql -c "select * from public.talleres_disponibilidad;"
+if [ -f "$DESPUES" ]; then
+  echo
+  echo "Verificación:"
+  correr_sql < "$DESPUES"
+fi
+
 echo
 echo "Listo."

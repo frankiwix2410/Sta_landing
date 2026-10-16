@@ -1,5 +1,5 @@
--- Pruebas de las reglas de `talleres`. Ejecutar SOLO en un proyecto de prueba
--- que ya tenga `schema.sql` y la migración 20261013_01 aplicados. Todo corre
+-- Pruebas de las reglas de `talleres`. Ejecutar SOLO en una base de prueba con
+-- `schema.sql` y las migraciones de `supabase/migrations/` aplicadas. Todo corre
 -- dentro de una transacción que se deshace al final: no deja datos.
 -- Cada comprobación imprime "OK ..." o aborta con "FALLO ...".
 
@@ -13,6 +13,7 @@ values
 do $$
 declare
   v_reason text;
+  v_ok     boolean;
 begin
   -- 1. Dos activos solapados: rechazado.
   begin
@@ -54,34 +55,34 @@ begin
     raise notice 'OK orden de fechas';
   end;
 
-  -- 6. Reserva en publicado con cupo: ok; la segunda: sold_out.
-  select reason into v_reason from public.create_reservation(
-    'prueba-a', 'STA-TEST0001', 'general', 'Cupo General', null, null,
-    'Prueba', 'p@example.com', '3000000000', 'C', 'P', '');
-  if v_reason is not null then raise exception 'FALLO: reserva rechazada (%)', v_reason; end if;
+  -- 6. Reserva en publicado con cupo: ok; la segunda: sin_cupos.
+  select ok, reason into v_ok, v_reason from public.crear_inscripcion(
+    (select id from public.talleres where slug = 'prueba-a'), 'STA-TEST0001', '900001', 'CC',
+    'Prueba Uno', 'p@example.com', '3000000000', 'C', 'P', 'general', 'Cupo General', null, null, '', 'web', false);
+  if not v_ok or v_reason is not null then raise exception 'FALLO: reserva rechazada (%)', v_reason; end if;
 
-  select reason into v_reason from public.create_reservation(
-    'prueba-a', 'STA-TEST0002', 'general', 'Cupo General', null, null,
-    'Prueba', 'p@example.com', '3000000000', 'C', 'P', '');
-  if v_reason is distinct from 'sold_out' then raise exception 'FALLO: esperaba sold_out, llegó %', v_reason; end if;
+  select ok, reason into v_ok, v_reason from public.crear_inscripcion(
+    (select id from public.talleres where slug = 'prueba-a'), 'STA-TEST0002', '900002', 'CC',
+    'Prueba Dos', 'p@example.com', '3000000000', 'C', 'P', 'general', 'Cupo General', null, null, '', 'web', false);
+  if v_ok or v_reason is distinct from 'sin_cupos' then raise exception 'FALLO: esperaba sin_cupos, llegó %', v_reason; end if;
   raise notice 'OK cupo respetado';
 
-  -- 7. Taller cerrado: closed.
+  -- 7. Taller cerrado: cerrado.
   update public.talleres set estado = 'cerrado', cupos_total = 10 where slug = 'prueba-a';
-  select reason into v_reason from public.create_reservation(
-    'prueba-a', 'STA-TEST0003', 'general', 'Cupo General', null, null,
-    'Prueba', 'p@example.com', '3000000000', 'C', 'P', '');
-  if v_reason is distinct from 'closed' then raise exception 'FALLO: esperaba closed, llegó %', v_reason; end if;
+  select ok, reason into v_ok, v_reason from public.crear_inscripcion(
+    (select id from public.talleres where slug = 'prueba-a'), 'STA-TEST0003', '900003', 'CC',
+    'Prueba Tres', 'p@example.com', '3000000000', 'C', 'P', 'general', 'Cupo General', null, null, '', 'web', false);
+  if v_ok or v_reason is distinct from 'cerrado' then raise exception 'FALLO: esperaba cerrado, llegó %', v_reason; end if;
   raise notice 'OK cerrado no acepta reservas';
 
-  -- 8. Publicado pero con fecha pasada: closed.
+  -- 8. Publicado pero con fecha pasada: cerrado.
   update public.talleres
      set estado = 'publicado', fecha_inicio = '2020-01-01', fecha_fin = '2020-01-02'
    where slug = 'prueba-a';
-  select reason into v_reason from public.create_reservation(
-    'prueba-a', 'STA-TEST0004', 'general', 'Cupo General', null, null,
-    'Prueba', 'p@example.com', '3000000000', 'C', 'P', '');
-  if v_reason is distinct from 'closed' then raise exception 'FALLO: esperaba closed por fecha, llegó %', v_reason; end if;
+  select ok, reason into v_ok, v_reason from public.crear_inscripcion(
+    (select id from public.talleres where slug = 'prueba-a'), 'STA-TEST0004', '900004', 'CC',
+    'Prueba Cuatro', 'p@example.com', '3000000000', 'C', 'P', 'general', 'Cupo General', null, null, '', 'web', false);
+  if v_ok or v_reason is distinct from 'cerrado' then raise exception 'FALLO: esperaba cerrado por fecha, llegó %', v_reason; end if;
   raise notice 'OK publicado vencido no acepta reservas';
 
   -- 9. Disponibilidad nunca negativa con cupos por debajo de lo ocupado.
