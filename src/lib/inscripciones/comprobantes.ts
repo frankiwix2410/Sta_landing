@@ -32,7 +32,7 @@ type FilaRegistrar = {
  */
 export async function guardarComprobante(
   c: NuevoComprobante,
-): Promise<Resultado<{ referencia: string; enRevision: number }>> {
+): Promise<Resultado<{ referencia: string; enRevision: number; nombreBloqueado: boolean }>> {
   const supabase = getSupabase();
   if (!supabase) {
     console.info("[taller] comprobante (sin Supabase)", {
@@ -72,7 +72,15 @@ export async function guardarComprobante(
 
   const fila = (data as FilaRegistrar[] | null)?.[0] ?? null;
   if (fila?.ok && fila.inscripcion_referencia) {
-    return { ok: true, valor: { referencia: fila.inscripcion_referencia, enRevision: fila.nuevo_en_revision } };
+    return {
+      ok: true,
+      valor: {
+        referencia: fila.inscripcion_referencia,
+        enRevision: fila.nuevo_en_revision,
+        // ok = true con este reason: se registró, pero sin cambiar el nombre.
+        nombreBloqueado: fila.reason === "nombre_bloqueado",
+      },
+    };
   }
 
   await bucket.remove([ruta]);

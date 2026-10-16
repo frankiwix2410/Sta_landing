@@ -44,7 +44,13 @@ export type NuevaInscripcion = {
   forzarCupo: boolean;
 };
 
-export type InscripcionCreada = { inscripcionId: string; referencia: string; reactivada: boolean };
+export type InscripcionCreada = {
+  inscripcionId: string;
+  referencia: string;
+  reactivada: boolean;
+  /** La web no puede cambiar nombre ni documento de quien ya tiene un certificado vigente. */
+  nombreBloqueado: boolean;
+};
 
 type FilaCrear = {
   ok: boolean;
@@ -94,6 +100,7 @@ export async function crearInscripcion(n: NuevaInscripcion): Promise<Resultado<I
         inscripcionId: fila.inscripcion_id,
         referencia: fila.inscripcion_referencia,
         reactivada: fila.reactivada,
+        nombreBloqueado: fila.reason === "nombre_bloqueado",
       },
     };
   }

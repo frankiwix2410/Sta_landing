@@ -19,6 +19,7 @@ export type MotivoInscripcion =
   | "misma_persona"
   | "estado_invalido"
   | "origen_invalido"
+  | "nombre_bloqueado"
   | "documento_duplicado"
   | "limite"
   | "error";
@@ -39,6 +40,7 @@ const DE_LA_BASE: readonly MotivoInscripcion[] = [
   "misma_persona",
   "estado_invalido",
   "origen_invalido",
+  "nombre_bloqueado",
 ];
 
 export function motivoDesdeReason(reason: string | null | undefined): MotivoInscripcion {
@@ -71,6 +73,9 @@ export const MENSAJES_INSCRIPCION: Record<MotivoInscripcion, string> = {
   misma_persona: "Elige una persona distinta para fusionar.",
   estado_invalido: "Estado de comprobante no válido. Recarga la página e inténtalo de nuevo.",
   origen_invalido: "Origen de la inscripción no válido.",
+  // No es un fallo: la operación se hizo, pero sin tocar nombre ni documento.
+  nombre_bloqueado:
+    "Registramos tu solicitud, pero tu nombre y tu documento no se cambiaron porque ya tienes un certificado emitido. Para corregirlos escríbenos por WhatsApp.",
   documento_duplicado: "Ya existe otra persona con ese documento. Usa «Fusionar» para unirlas.",
   limite: "Demasiadas consultas seguidas. Espera unos minutos e inténtalo de nuevo.",
   error: "No se pudo completar. Inténtalo otra vez en unos segundos.",
