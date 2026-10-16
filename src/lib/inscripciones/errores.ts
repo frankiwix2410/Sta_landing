@@ -18,6 +18,7 @@ export type MotivoInscripcion =
   | "tiene_certificado"
   | "misma_persona"
   | "estado_invalido"
+  | "origen_invalido"
   | "documento_duplicado"
   | "limite"
   | "error";
@@ -37,6 +38,7 @@ const DE_LA_BASE: readonly MotivoInscripcion[] = [
   "tiene_certificado",
   "misma_persona",
   "estado_invalido",
+  "origen_invalido",
 ];
 
 export function motivoDesdeReason(reason: string | null | undefined): MotivoInscripcion {
@@ -68,6 +70,7 @@ export const MENSAJES_INSCRIPCION: Record<MotivoInscripcion, string> = {
     "Tiene un certificado emitido: no se puede eliminar ni fusionar. Revoca el certificado o cancela la inscripción.",
   misma_persona: "Elige una persona distinta para fusionar.",
   estado_invalido: "Estado de comprobante no válido. Recarga la página e inténtalo de nuevo.",
+  origen_invalido: "Origen de la inscripción no válido.",
   documento_duplicado: "Ya existe otra persona con ese documento. Usa «Fusionar» para unirlas.",
   limite: "Demasiadas consultas seguidas. Espera unos minutos e inténtalo de nuevo.",
   error: "No se pudo completar. Inténtalo otra vez en unos segundos.",

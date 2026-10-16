@@ -15,6 +15,9 @@
 
 begin;
 
+-- Si otra sesión retiene un bloqueo, falla en vez de quedarse esperando.
+set local lock_timeout = '10s';
+
 do $$
 begin
   create type public.inscripcion_origen as enum ('web', 'admin', 'migracion');
@@ -157,6 +160,12 @@ declare
 begin
   if to_regclass('public.reservations') is null then
     return;
+  end if;
+
+  -- Ningún taller puede estar abierto mientras se migra (ver «Orden de
+  -- despliegue» del plan): una reserva web entrando a mitad se perdería.
+  if exists (select 1 from public.talleres t where t.estado = 'publicado') then
+    raise exception 'Hay talleres en estado publicado. Ciérralos (estado cerrado) antes de migrar.';
   end if;
 
   -- Un comprobante sin reserva no tiene inscripción a la que colgarse. Antes
@@ -419,8 +428,9 @@ declare
   v_existente public.inscripciones%rowtype;
   v_id        uuid;
 begin
-  if p_origen not in ('web', 'admin') then
-    raise exception 'origen no válido: %', p_origen;
+  if p_origen is null or p_origen not in ('web', 'admin') then
+    return query select false, 'origen_invalido'::text, null::uuid, null::text, false, 0, 0;
+    return;
   end if;
 
   perform pg_advisory_xact_lock(hashtext('taller:' || p_taller_id::text));
@@ -673,12 +683,22 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_ins uuid;
-  v_pct integer;
+  v_ins    uuid;
+  v_pct    integer;
+  v_taller uuid;
 begin
-  if p_estado not in ('pending', 'verified', 'rejected') then
+  if p_estado is null or p_estado not in ('pending', 'verified', 'rejected') then
     return query select false, 'estado_invalido'::text, null::integer;
     return;
+  end if;
+
+  -- Mismo bloqueo por taller que registrar_comprobante: la revisión no se
+  -- cruza con un pago que entra a la vez.
+  select i.taller_id into v_taller
+    from public.comprobantes c join public.inscripciones i on i.id = c.inscripcion_id
+   where c.id = p_comprobante_id;
+  if v_taller is not null then
+    perform pg_advisory_xact_lock(hashtext('taller:' || v_taller::text));
   end if;
 
   update public.comprobantes c
@@ -708,11 +728,17 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_pct integer;
+  v_pct    integer;
+  v_taller uuid;
 begin
   if p_porcentaje is not null and (p_porcentaje < 0 or p_porcentaje > 100) then
     return query select false, 'porcentaje_no_permitido'::text, null::integer;
     return;
+  end if;
+
+  select i.taller_id into v_taller from public.inscripciones i where i.id = p_inscripcion_id;
+  if v_taller is not null then
+    perform pg_advisory_xact_lock(hashtext('taller:' || v_taller::text));
   end if;
 
   update public.inscripciones i
@@ -741,13 +767,18 @@ set search_path = ''
 as $$
 declare
   v_persona  uuid;
+  v_taller   uuid;
   v_archivos text[];
 begin
-  select i.persona_id into v_persona from public.inscripciones i where i.id = p_inscripcion_id;
+  select i.persona_id, i.taller_id into v_persona, v_taller
+    from public.inscripciones i where i.id = p_inscripcion_id;
   if v_persona is null then
     return query select false, 'no_encontrado'::text, null::text[];
     return;
   end if;
+
+  -- Bloqueo por taller y comprobación de pagos verificados, en ese orden.
+  perform pg_advisory_xact_lock(hashtext('taller:' || v_taller::text));
 
   if exists (
     select 1 from public.comprobantes c

@@ -13,7 +13,7 @@ describe("motivoDesdeReason", () => {
     // Lista de los `reason` de supabase/migrations/20261015_01_inscripciones.sql.
     const delSql = [
       "taller_desconocido", "documento_invalido", "cerrado", "ya_inscrito", "sin_cupos",
-      "sin_inscripcion", "sin_saldo", "porcentaje_no_permitido", "estado_invalido",
+      "sin_inscripcion", "sin_saldo", "porcentaje_no_permitido", "estado_invalido", "origen_invalido",
       "no_encontrado", "tiene_pagos_verificados", "tiene_certificado", "misma_persona",
     ];
     for (const reason of delSql) {

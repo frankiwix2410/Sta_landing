@@ -6,7 +6,9 @@ union all select 'comprobantes', count(*) from public.comprobantes
 union all select '_legacy_payment_proofs', count(*) from public._legacy_payment_proofs
 union all select 'personas', count(*) from public.personas
 union all select 'personas por identificar', count(*) from public.personas where documento is null;
-select referencia, nombre, documento, porcentaje_pagado, porcentaje_manual, porcentaje_en_revision,
+select referencia, left(nombre, 2) || '***' as nombre,
+       case when documento is null then null else '****' || right(documento, 3) end as documento,
+       porcentaje_pagado, porcentaje_manual, porcentaje_en_revision,
        cancelada, asistio
   from public.inscritos_admin
  order by creado_en;

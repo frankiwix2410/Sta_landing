@@ -23,6 +23,10 @@ declare
   v_dup_p  uuid;
   v_dup_i  uuid;
   v_notas  text;
+  v_tl     uuid;
+  v_pl     uuid;
+  v_il     uuid;
+  v_cl     uuid := gen_random_uuid();
 begin
   -- 1. Reserva web: el documento se normaliza y se crea la persona.
   select * into r from public.crear_inscripcion(v_taller, 'STA-PRUEBA01', ' 1.136-882 468 ', 'CC',
@@ -247,6 +251,46 @@ begin
     raise exception 'FALLO 17: normalizar_documento no coincide con normalizarDocumento';
   end if;
   raise notice 'OK normalizar_documento coincide con la versión de TypeScript';
+
+  -- 18. Origen nulo o desconocido: razón de error, no excepción; estado nulo igual.
+  select * into r from public.crear_inscripcion(v_taller, 'STA-PRUEBA09', '5000001', 'CC',
+    'Eli Prueba', 'e@example.com', '3005556677', 'X', 'X', 'general', 'Cupo General', null, null, '', null, false);
+  if r.ok or r.reason is distinct from 'origen_invalido' then
+    raise exception 'FALLO 18a: origen nulo (ok %, reason %)', r.ok, r.reason;
+  end if;
+  select * into r from public.revisar_comprobante(gen_random_uuid(), null, null);
+  if r.ok or r.reason is distinct from 'estado_invalido' then
+    raise exception 'FALLO 18b: estado nulo (ok %, reason %)', r.ok, r.reason;
+  end if;
+  raise notice 'OK origen y estado nulos devuelven razón';
+
+  -- 19. revisar / ajustar / eliminar toman el bloqueo por taller. Taller nuevo
+  --     para que ningún paso anterior haya dejado ya el bloqueo en esta transacción.
+  insert into public.talleres
+    (slug, nombre, titulo, estado, fecha_inicio, fecha_fin, fechas_texto, sede_nombre, ciudad, pais, cupos_total)
+  values ('prueba-l', 'L', 'L', 'borrador', '2032-05-10', '2032-05-11', 'x', 'S', 'C', 'P', 5);
+  v_tl := (select id from public.talleres where slug = 'prueba-l');
+  insert into public.personas (documento, nombre) values ('LOCK0001', 'Lock Uno') returning id into v_pl;
+  insert into public.inscripciones (referencia, persona_id, taller_id, tarifa_id, tarifa_nombre)
+  values ('STA-LOCK01', v_pl, v_tl, 'general', 'Cupo General') returning id into v_il;
+  insert into public.comprobantes (id, inscripcion_id, porcentaje, file_path, file_type, file_size)
+  values (v_cl, v_il, 50, 'prueba-l/c.jpg', 'image/jpeg', 10);
+
+  select * into r from public.revisar_comprobante(v_cl, 'verified', null);
+  if not r.ok or r.nuevo_porcentaje <> 50 then raise exception 'FALLO 19a: %', r.reason; end if;
+  if not exists (select 1 from pg_locks where locktype = 'advisory' and pid = pg_backend_pid()
+                  and objid = (hashtext('taller:' || v_tl::text)::bigint & 4294967295)::oid) then
+    raise exception 'FALLO 19a: revisar_comprobante no tomó el bloqueo del taller';
+  end if;
+  select * into r from public.ajustar_porcentaje(v_il, 80);
+  if not r.ok or r.nuevo_porcentaje <> 80 then raise exception 'FALLO 19b: %', r.reason; end if;
+  select * into r from public.ajustar_porcentaje(v_il, null);
+  if not r.ok or r.nuevo_porcentaje <> 50 then raise exception 'FALLO 19b2: %', r.reason; end if;
+  select * into r from public.revisar_comprobante(v_cl, 'pending', null);
+  if not r.ok then raise exception 'FALLO 19c: %', r.reason; end if;
+  select * into r from public.eliminar_inscripcion(v_il);
+  if not r.ok or r.archivos <> array['prueba-l/c.jpg'] then raise exception 'FALLO 19d: % %', r.reason, r.archivos; end if;
+  raise notice 'OK revisar, ajustar y eliminar con bloqueo por taller';
 end
 $$;
 

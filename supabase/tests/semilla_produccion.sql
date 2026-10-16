@@ -4,6 +4,10 @@
 
 begin;
 
+-- La migración exige que ningún taller esté publicado (en producción se cierra
+-- a mano antes de migrar, según el plan de despliegue).
+update public.talleres set estado = 'cerrado' where estado = 'publicado';
+
 insert into public.reservations
   (id, reference, edition, tier_id, tier_name, amount, currency, name, document, email, phone,
    city, profession, notes, status, attended, created_at)
