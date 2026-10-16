@@ -1,7 +1,7 @@
 import Image from "next/image";
 import QRCode from "qrcode";
 import "./sheet.css";
-import { documentoImpreso, tallaDocumento, tallaNombre } from "@/lib/certificados/hoja";
+import { numeroDocumento, tallaDocumento, tallaNombre } from "@/lib/certificados/hoja";
 import type { Certificado } from "@/lib/certificados/tipos";
 import { site } from "@/lib/site";
 import { contenidoTaller } from "@/lib/taller";
@@ -36,7 +36,7 @@ export async function CertificateSheet({ certificado }: { certificado: Certifica
     document: certificado.firmaDocumento ?? fallback.document,
   };
   const lugar = [certificado.ciudad, certificado.region].filter(Boolean).join(", ");
-  const documento = documentoImpreso(certificado.tipoDocumento, certificado.documento);
+  const documento = numeroDocumento(certificado.tipoDocumento, certificado.documento);
 
   return (
     <article className="cert-sheet relative h-[210mm] w-[297mm] overflow-hidden bg-white font-sans text-navy">

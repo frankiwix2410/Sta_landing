@@ -10,17 +10,25 @@ const PREFIJO: Record<TipoDocumento, string> = {
 };
 
 /**
- * El documento como se imprime: "C.C. 1.136.882.468", con el mismo formato
- * que la firma del instructor. Los pasaportes y los que llevan letras van tal
- * cual: ponerles puntos los volvería irreconocibles.
+ * Solo el número, como va en la hoja del certificado: "1.136.882.468". La hoja
+ * ya dice «Documento de identidad» y el dueño no quiere el tipo delante. Los
+ * pasaportes y los que llevan letras van tal cual: ponerles puntos los
+ * volvería irreconocibles.
+ */
+export function numeroDocumento(tipo: TipoDocumento, documento: string | null): string {
+  if (!documento) return "";
+  return tipo !== "PAS" && /^\d+$/.test(documento)
+    ? documento.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
+    : documento;
+}
+
+/**
+ * El documento con su tipo: "C.C. 1.136.882.468". Para el admin, donde el tipo
+ * ayuda a distinguir documentos parecidos.
  */
 export function documentoImpreso(tipo: TipoDocumento, documento: string | null): string {
   if (!documento) return "";
-  const cuerpo =
-    tipo !== "PAS" && /^\d+$/.test(documento)
-      ? documento.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
-      : documento;
-  return [PREFIJO[tipo], cuerpo].filter(Boolean).join(" ");
+  return [PREFIJO[tipo], numeroDocumento(tipo, documento)].filter(Boolean).join(" ");
 }
 
 /**

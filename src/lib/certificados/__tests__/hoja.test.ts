@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { documentoImpreso, fechaLarga, tallaDocumento, tallaNombre } from "../hoja";
+import { documentoImpreso, fechaLarga, numeroDocumento, tallaDocumento, tallaNombre } from "../hoja";
+
+describe("numeroDocumento", () => {
+  it("solo el número, sin el tipo: así va en la hoja del certificado", () => {
+    expect(numeroDocumento("CC", "1136882468")).toBe("1.136.882.468");
+    expect(numeroDocumento("CI", "V20111222")).toBe("V20111222");
+    expect(numeroDocumento("PAS", "123456789")).toBe("123456789");
+    expect(numeroDocumento("CC", null)).toBe("");
+  });
+});
 
 describe("documentoImpreso", () => {
   it("cédulas numéricas con puntos de miles, como la firma", () => {
