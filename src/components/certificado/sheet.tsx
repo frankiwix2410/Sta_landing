@@ -1,7 +1,8 @@
 import Image from "next/image";
 import QRCode from "qrcode";
 import "./sheet.css";
-import type { Certificate } from "@/lib/reservations/certificates";
+import { documentoImpreso, tallaNombre } from "@/lib/certificados/hoja";
+import type { Certificado } from "@/lib/certificados/tipos";
 import { site } from "@/lib/site";
 import { contenidoTaller } from "@/lib/taller";
 
@@ -12,28 +13,30 @@ import { contenidoTaller } from "@/lib/taller";
  * imprimirse: en mm la hoja mide lo mismo en pantalla que en el PDF, y el
  * navegador no reescala el contenido al pasar por «Guardar como PDF».
  *
- * El nombre va en blanco a propósito: se escribe a mano sobre la línea. Por eso
- * la hoja tampoco lleva la referencia de la reserva, y el QR apunta a la web y
- * no a una persona concreta.
+ * Lleva impresos el nombre y el documento de la persona, y su código con un
+ * QR que abre la página de verificación: quien reciba el papel puede comprobar
+ * que es auténtico y que no fue revocado. Curso, fechas, sede, aval y firma
+ * salen de la copia fijada al emitir, no del taller tal como esté hoy; la
+ * excepción son las horas, que siguen al taller (la base mantiene al día
+ * `certificados.horas`).
  */
-export async function CertificateSheet({
-  certificate,
-}: {
-  certificate: Certificate;
-}) {
-  const { courseTitle, datesLabel, hours, endorsement } = certificate;
-  const course = splitCourse(courseTitle);
+export async function CertificateSheet({ certificado }: { certificado: Certificado }) {
+  // Alias con los nombres de antes: así el resto de la hoja no cambia.
+  const { curso, fechasTexto: datesLabel, horas: hours, aval: endorsement } = certificado;
+  const course = splitCourse(curso);
   const url = siteUrl();
-  const qr = url ? await qrSvg(url) : null;
-  // La firma y la sede salen del taller en la base; el contenido por defecto
-  // solo cubre talleres anteriores a que existieran esos campos.
+  const verificacion = url ? `${url}/certificado/verificar/${certificado.codigo}` : null;
+  const qr = verificacion ? await qrSvg(verificacion) : null;
+  // La firma sale del taller; el contenido por defecto solo cubre talleres que
+  // no la tenían.
   const fallback = contenidoTaller.instructor.signature;
   const signature = {
-    name: certificate.signatureName ?? fallback.name,
-    title: certificate.signatureTitle ?? fallback.title,
-    document: certificate.signatureDocument ?? fallback.document,
+    name: certificado.firmaNombre ?? fallback.name,
+    title: certificado.firmaCargo ?? fallback.title,
+    document: certificado.firmaDocumento ?? fallback.document,
   };
-  const lugar = [certificate.venueCity, certificate.venueRegion].filter(Boolean).join(", ");
+  const lugar = [certificado.ciudad, certificado.region].filter(Boolean).join(", ");
+  const documento = documentoImpreso(certificado.tipoDocumento, certificado.documento);
 
   return (
     <article className="cert-sheet relative h-[210mm] w-[297mm] overflow-hidden bg-white font-sans text-navy">
@@ -79,8 +82,11 @@ export async function CertificateSheet({
                 dangerouslySetInnerHTML={{ __html: qr }}
               />
             ) : null}
-            <p className="mt-[1.5mm] text-[2.4mm] font-semibold tracking-[0.12em] text-navy uppercase">
-              {url ? url.replace(/^https?:\/\//, "") : `@${site.instagram}`}
+            <p className="mt-[1.5mm] font-mono text-[2.6mm] font-semibold tracking-[0.08em] text-navy">
+              {certificado.codigo}
+            </p>
+            <p className="mt-[0.4mm] text-[2.1mm] tracking-[0.1em] text-ink uppercase">
+              {url ? `Verifica en ${url.replace(/^https?:\/\//, "")}` : `@${site.instagram}`}
             </p>
           </div>
         </header>
@@ -102,15 +108,28 @@ export async function CertificateSheet({
         <p className="mt-[4mm] text-[3.3mm] font-medium tracking-[0.22em] text-ink uppercase">
           Se otorga a:
         </p>
-        {/* Espacio para escribir el nombre a mano */}
-        <div className="mt-[13mm] h-[0.3mm] w-[175mm] bg-navy/50" />
+        {/* Nombre impreso sobre su línea. La caja tiene alto fijo para que un
+            nombre largo (que baja de tamaño) no empuje el resto de la hoja. */}
+        <div className="mt-[2mm] flex h-[10mm] w-[175mm] items-end justify-center">
+          <p
+            className="leading-none font-bold tracking-[0.04em] text-navy uppercase"
+            style={{ fontSize: `${tallaNombre(certificado.nombre)}mm` }}
+          >
+            {certificado.nombre}
+          </p>
+        </div>
+        <div className="mt-[1.5mm] h-[0.3mm] w-[175mm] bg-navy/50" />
 
-        {/* Y el documento de identidad, también a mano */}
-        <div className="mt-[5mm] flex items-end gap-x-[3mm]">
+        {/* Documento sobre su línea; si la persona no lo tiene registrado, la
+            línea queda en blanco para escribirlo a mano. */}
+        <div className="mt-[4mm] flex items-end gap-x-[3mm]">
           <p className="text-[3.1mm] font-medium tracking-[0.16em] text-ink uppercase">
             Documento de identidad:
           </p>
-          <div className="mb-[0.6mm] h-[0.3mm] w-[60mm] bg-navy/50" />
+          <div className="flex w-[60mm] flex-col items-center">
+            <p className="min-h-[4mm] text-[3.6mm] font-semibold tracking-[0.06em] text-navy">{documento}</p>
+            <div className="mt-[0.6mm] h-[0.3mm] w-full bg-navy/50" />
+          </div>
         </div>
 
         {/* Curso */}

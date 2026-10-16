@@ -1,67 +1,78 @@
 import type { Metadata } from "next";
-import { CertificateSheet } from "@/components/certificado/sheet";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { Aviso } from "@/components/certificado/aviso";
 import { PrintButton } from "@/components/certificado/print-button";
-import { getCertificate } from "@/lib/reservations/certificates";
-import { tallerWaLink } from "@/lib/taller";
+import { CertificateSheet } from "@/components/certificado/sheet";
+import { esReferencia, normalizarCodigo } from "@/lib/certificados/codigo";
+import { codigoPorReferencia, obtenerCertificado } from "@/lib/certificados/repo";
 
-// El certificado se comprueba contra la base en cada visita: si se revoca una
-// asistencia, el enlace tiene que dejar de acreditar nada de inmediato.
+// Se comprueba contra la base en cada visita: si se revoca, el enlace deja de
+// acreditar nada de inmediato.
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Certificado de asistencia · STA",
-  // Lleva el nombre de una persona: no debe acabar en un buscador.
+  // Lleva el nombre y el documento de una persona: no debe acabar en un buscador.
   robots: { index: false, follow: false },
 };
 
-/** Aviso a pantalla completa para los casos en que no hay certificado que mostrar. */
-function Notice({ title, children }: { title: string; children: React.ReactNode }) {
+function SinConexion() {
   return (
-    <main className="grid min-h-[100svh] place-items-center bg-cream px-5 py-16">
-      <div className="max-w-[520px] text-center">
-        <h1 className="text-[clamp(26px,4vw,38px)] leading-[1.15] text-navy">{title}</h1>
-        <div className="mt-5 text-[15px] leading-[1.8] text-ink">{children}</div>
-        <a
-          href={tallerWaLink("Hola, tengo una duda con mi certificado del taller.")}
-          target="_blank"
-          rel="noopener"
-          className="mt-8 inline-flex cursor-pointer items-center rounded-full bg-navy px-6 py-3.5 text-[14px] font-semibold text-white transition-colors duration-200 hover:bg-azure"
-        >
-          Escribir por WhatsApp
-        </a>
-      </div>
-    </main>
+    <Aviso titulo="No podemos mostrarlo ahora mismo">
+      <p>
+        Hubo un problema al consultar los certificados. Vuelve a intentarlo en unos minutos y, si
+        sigue igual, escríbenos y lo resolvemos.
+      </p>
+    </Aviso>
   );
 }
 
-export default async function CertificadoPage({
-  params,
-}: {
-  params: Promise<{ code: string }>;
-}) {
-  const { code } = await params;
-  const lookup = await getCertificate(decodeURIComponent(code));
+function NoEncontrado() {
+  return (
+    <Aviso titulo="Certificado no disponible">
+      <p>
+        No encontramos un certificado con ese código. Puede que esté mal escrito o que todavía no se
+        haya emitido: se emite cuando el taller termina, con el pago completo y la asistencia
+        registrada.
+      </p>
+    </Aviso>
+  );
+}
 
-  if (lookup.kind === "unavailable") {
-    return (
-      <Notice title="No podemos verificarlo ahora mismo">
-        <p>
-          Hubo un problema al consultar los certificados. Vuelve a intentarlo en unos
-          minutos y, si sigue igual, escríbenos y lo resolvemos.
-        </p>
-      </Notice>
-    );
+export default async function CertificadoPage({ params }: { params: Promise<{ code: string }> }) {
+  const { code } = await params;
+  let texto = code;
+  try {
+    texto = decodeURIComponent(code).trim();
+  } catch {
+    // Un `%` suelto no es un código; se trata como no encontrado más abajo.
   }
 
-  if (lookup.kind === "not_found") {
+  // Enlaces antiguos por referencia de la reserva: llevan al código si existe.
+  if (esReferencia(texto)) {
+    const codigo = await codigoPorReferencia(texto.toUpperCase());
+    if (codigo === "unavailable") return <SinConexion />;
+    if (codigo) redirect(`/certificado/${codigo}`);
+    return <NoEncontrado />;
+  }
+
+  const codigo = normalizarCodigo(texto);
+  if (!codigo) return <NoEncontrado />;
+  if (codigo !== texto) redirect(`/certificado/${codigo}`);
+
+  const r = await obtenerCertificado(codigo);
+  if (r.kind === "unavailable") return <SinConexion />;
+  if (r.kind === "not_found") return <NoEncontrado />;
+
+  if (r.certificado.revocadoEn) {
     return (
-      <Notice title="Certificado no disponible">
+      <Aviso titulo="Certificado revocado">
         <p>
-          No encontramos un certificado con ese código. Puede que la referencia esté mal
-          escrita, que el pago aún no esté confirmado o que todavía no hayamos registrado
-          la asistencia al taller.
+          El certificado {codigo} fue revocado y ya no acredita la participación. Si crees que es un
+          error, escríbenos.
         </p>
-      </Notice>
+      </Aviso>
     );
   }
 
@@ -71,8 +82,11 @@ export default async function CertificadoPage({
         <div>
           <h1 className="text-[22px] leading-tight text-navy">Tu certificado</h1>
           <p className="mt-1 text-[13.5px] text-ink-soft">
-            Guárdalo como PDF desde el botón. El enlace sigue siendo válido para
-            verificarlo cuando quieras.
+            Guárdalo como PDF desde el botón. Cualquiera puede comprobarlo con el QR o en{" "}
+            <Link href={`/certificado/verificar/${codigo}`} className="text-azure underline-offset-4 hover:underline">
+              la página de verificación
+            </Link>
+            .
           </p>
         </div>
         <PrintButton />
@@ -83,7 +97,7 @@ export default async function CertificadoPage({
           barra horizontal a toda la página. */}
       <div className="overflow-x-auto">
         <div className="mx-auto w-fit">
-          <CertificateSheet certificate={lookup.certificate} />
+          <CertificateSheet certificado={r.certificado} />
         </div>
       </div>
     </main>
