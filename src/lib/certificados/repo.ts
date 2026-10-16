@@ -24,7 +24,7 @@ export async function obtenerCertificado(codigo: string): Promise<BusquedaCertif
     .eq("codigo", codigo)
     .maybeSingle<FilaCertificado>();
   if (error) {
-    console.error("[certificados] no se pudo leer", { codigo, error });
+    console.error("[certificados] no se pudo leer", { error });
     return { kind: "unavailable" };
   }
   return data ? { kind: "found", certificado: filaACertificado(data) } : { kind: "not_found" };
@@ -40,7 +40,7 @@ export async function codigoPorReferencia(referencia: string): Promise<string | 
     .eq("referencia", referencia)
     .maybeSingle<{ codigo: string }>();
   if (error) {
-    console.error("[certificados] no se pudo buscar por referencia", { referencia, error });
+    console.error("[certificados] no se pudo buscar por referencia", { error });
     return "unavailable";
   }
   return data?.codigo ?? null;
@@ -56,7 +56,7 @@ export async function listarCertificadosTaller(tallerId: string): Promise<Certif
     .eq("taller_id", tallerId)
     .order("nombre");
   if (error) {
-    console.error("[certificados] no se pudieron listar", { tallerId, error });
+    console.error("[certificados] no se pudieron listar", { error });
     return null;
   }
   return (data as unknown as FilaCertificado[]).map(filaACertificado);
@@ -96,7 +96,7 @@ export async function revocarCertificado(
   });
   const fila = (data as FilaRevocar[] | null)?.[0] ?? null;
   if (error || !fila) {
-    console.error("[certificados] no se pudo revocar/reactivar", { id, error });
+    console.error("[certificados] no se pudo revocar/reactivar", { error });
     return { ok: false, motivo: "error" };
   }
   return fila.ok ? { ok: true, vigente: fila.vigente } : { ok: false, motivo: motivoDesdeReason(fila.reason) };

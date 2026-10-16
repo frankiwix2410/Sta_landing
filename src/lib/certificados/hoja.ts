@@ -25,14 +25,27 @@ export function documentoImpreso(tipo: TipoDocumento, documento: string | null):
 
 /**
  * Tamaño del nombre en mm. Va en mayúsculas sobre una línea de 175 mm: a 9 mm
- * caben ~22 letras; los nombres largos bajan de tamaño en vez de partirse.
+ * caben ~22 letras; los nombres largos bajan de tamaño en vez de partirse. Los
+ * muy largos (hasta ~120 caracteres) caben en dos líneas con el tamaño mínimo;
+ * lo que pase de ahí lo recorta la caja de la hoja.
  */
 export function tallaNombre(nombre: string): number {
   const n = nombre.trim().length;
   if (n <= 22) return 9;
   if (n <= 30) return 7.5;
   if (n <= 40) return 6;
-  return 5;
+  if (n <= 55) return 5;
+  if (n <= 75) return 4.2;
+  if (n <= 95) return 3.6;
+  return 3.2;
+}
+
+/** Tamaño del documento impreso en mm: baja si es largo para no partirse. */
+export function tallaDocumento(impreso: string): number {
+  const n = impreso.length;
+  if (n <= 18) return 3.6;
+  if (n <= 26) return 3;
+  return 2.5;
 }
 
 const FECHA_LARGA = new Intl.DateTimeFormat("es-CO", {

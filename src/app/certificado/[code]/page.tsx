@@ -40,6 +40,9 @@ function NoEncontrado() {
   );
 }
 
+// El código funciona como secreto de portador: quien lo tiene (el papel, el QR o
+// el enlace) puede ver el nombre y el documento impresos, igual que quien tiene
+// el papel en la mano. No se exige nada más a propósito.
 export default async function CertificadoPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
   let texto = code;

@@ -33,6 +33,24 @@ export default async function ImprimirPage({
   const vigentes = (certificados ?? []).filter((c) => !c.revocadoEn);
   const volver = tallerId ? `/admin/certificados?taller=${tallerId}` : "/admin/certificados";
 
+  if (tallerId && certificados === null) {
+    return (
+      <main className="grid min-h-[100svh] place-items-center bg-cream px-5">
+        <div className="text-center">
+          <p className="text-[15px] text-ink">
+            No se pudieron cargar los certificados. Revisa la conexión e inténtalo de nuevo.
+          </p>
+          <Link
+            href={volver}
+            className="mt-5 inline-block text-[14px] font-semibold text-azure underline-offset-4 hover:underline"
+          >
+            Volver
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
   if (vigentes.length === 0) {
     return (
       <main className="grid min-h-[100svh] place-items-center bg-cream px-5">

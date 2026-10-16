@@ -1,7 +1,7 @@
 import Image from "next/image";
 import QRCode from "qrcode";
 import "./sheet.css";
-import { documentoImpreso, tallaNombre } from "@/lib/certificados/hoja";
+import { documentoImpreso, tallaDocumento, tallaNombre } from "@/lib/certificados/hoja";
 import type { Certificado } from "@/lib/certificados/tipos";
 import { site } from "@/lib/site";
 import { contenidoTaller } from "@/lib/taller";
@@ -110,9 +110,9 @@ export async function CertificateSheet({ certificado }: { certificado: Certifica
         </p>
         {/* Nombre impreso sobre su línea. La caja tiene alto fijo para que un
             nombre largo (que baja de tamaño) no empuje el resto de la hoja. */}
-        <div className="mt-[2mm] flex h-[10mm] w-[175mm] items-end justify-center">
+        <div className="mt-[2mm] flex h-[10mm] w-[175mm] items-end justify-center overflow-hidden">
           <p
-            className="leading-none font-bold tracking-[0.04em] text-navy uppercase"
+            className="line-clamp-2 max-h-full text-center leading-[1] font-bold tracking-[0.04em] text-balance text-navy uppercase"
             style={{ fontSize: `${tallaNombre(certificado.nombre)}mm` }}
           >
             {certificado.nombre}
@@ -126,8 +126,13 @@ export async function CertificateSheet({ certificado }: { certificado: Certifica
           <p className="text-[3.1mm] font-medium tracking-[0.16em] text-ink uppercase">
             Documento de identidad:
           </p>
-          <div className="flex w-[60mm] flex-col items-center">
-            <p className="min-h-[4mm] text-[3.6mm] font-semibold tracking-[0.06em] text-navy">{documento}</p>
+          <div className="flex min-w-[60mm] flex-col items-center">
+            <p
+              className="min-h-[4mm] font-semibold tracking-[0.06em] whitespace-nowrap text-navy"
+              style={{ fontSize: `${tallaDocumento(documento)}mm` }}
+            >
+              {documento}
+            </p>
             <div className="mt-[0.6mm] h-[0.3mm] w-full bg-navy/50" />
           </div>
         </div>

@@ -39,7 +39,11 @@ export default async function VerificarPage({ params }: { params: Promise<{ codi
   if (r.kind === "not_found") {
     return (
       <Aviso titulo="Certificado no encontrado">
-        <p>No existe ningún certificado con el código {codigo ?? texto}. Revisa que esté bien escrito.</p>
+        <p>
+          {codigo
+            ? `No existe ningún certificado con el código ${codigo}. Revisa que esté bien escrito.`
+            : "El código no es válido. Revisa que esté bien escrito."}
+        </p>
       </Aviso>
     );
   }

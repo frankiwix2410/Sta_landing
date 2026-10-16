@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { documentoImpreso, fechaLarga, tallaNombre } from "../hoja";
+import { documentoImpreso, fechaLarga, tallaDocumento, tallaNombre } from "../hoja";
 
 describe("documentoImpreso", () => {
   it("cédulas numéricas con puntos de miles, como la firma", () => {
@@ -24,7 +24,20 @@ describe("tallaNombre", () => {
     expect(tallaNombre("A".repeat(23))).toBe(7.5);
     expect(tallaNombre("A".repeat(30))).toBe(7.5);
     expect(tallaNombre("A".repeat(31))).toBe(6);
+    expect(tallaNombre("A".repeat(40))).toBe(6);
     expect(tallaNombre("A".repeat(41))).toBe(5);
+    expect(tallaNombre("A".repeat(56))).toBe(4.2);
+    expect(tallaNombre("A".repeat(76))).toBe(3.6);
+    expect(tallaNombre("A".repeat(96))).toBe(3.2);
+    expect(tallaNombre("A".repeat(300))).toBe(3.2);
+  });
+});
+
+describe("tallaDocumento", () => {
+  it("baja con los documentos largos", () => {
+    expect(tallaDocumento("C.C. 1.136.882.468")).toBe(3.6);
+    expect(tallaDocumento("Pasaporte ABCDEFGHIJ")).toBe(3);
+    expect(tallaDocumento("Pasaporte ABCDEFGHIJKLMNOPQRST")).toBe(2.5);
   });
 });
 
