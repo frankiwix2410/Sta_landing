@@ -114,8 +114,13 @@ begin
   -- se serializan: el segundo espera al commit del primero y relee el taller.
   -- No es un advisory lock a propósito: ajustar_porcentaje toma primero el
   -- advisory y luego la fila de la inscripción, y el trigger del taller va en
-  -- orden inverso; mezclarlos daría un interbloqueo. La fila del taller solo la
-  -- toman estos caminos y siempre antes que cualquier fila de certificados.
+  -- orden inverso; mezclarlos daría un interbloqueo. Regla de orden: todo
+  -- camino que toque certificados toma ANTES el share de la fila del taller
+  -- (esta función, y también revocar_certificado y la rama persona_id del
+  -- trigger de inscripciones, que lo hacen por su cuenta porque escriben en
+  -- certificados antes de llamar aquí). El UPDATE del taller ya tiene esa fila
+  -- y recorre los certificados después: nadie espera al taller con un
+  -- certificado en la mano.
   for share of t;
 
   if not found then
@@ -161,6 +166,8 @@ as $$
 begin
   -- Fusión de personas: el certificado pasa a llevar el nombre del destino.
   if tg_op = 'UPDATE' and new.persona_id is distinct from old.persona_id then
+    -- Antes de tocar certificados: share del taller (ver sincronizar_certificado).
+    perform 1 from public.talleres t where t.id = new.taller_id for share of t;
     update public.certificados c
        set nombre = p.nombre, tipo_documento = p.tipo_documento, documento = p.documento
       from public.personas p
@@ -244,6 +251,16 @@ begin
     return query select false, 'estado_invalido'::text, false;
     return;
   end if;
+
+  -- Share de la fila del taller ANTES de escribir en certificados (ver el
+  -- orden de bloqueos en sincronizar_certificado); si no, choca con el
+  -- UPDATE de estado del taller, que recorre los certificados.
+  perform 1
+     from public.certificados c
+     join public.inscripciones i on i.id = c.inscripcion_id
+     join public.talleres t on t.id = i.taller_id
+    where c.id = p_certificado_id
+      for share of t;
 
   update public.certificados c
      set revocado_manual = p_revocar,
