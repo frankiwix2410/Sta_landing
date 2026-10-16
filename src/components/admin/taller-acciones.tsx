@@ -4,24 +4,9 @@ import { useActionState } from "react";
 import { cambiarEstado, duplicar, eliminar, type AccionState } from "@/app/admin/talleres/actions";
 import { ESTADO_ETIQUETA, ESTADOS_TALLER, type Taller } from "@/lib/talleres/tipos";
 import { botonPrimario, botonSecundario, inputClass, tarjeta } from "./ui";
+import { Mensaje } from "./mensaje";
 
 const inicial: AccionState = { status: "idle" };
-
-function Mensaje({ state }: { state: AccionState }) {
-  if (state.status === "error" && state.message)
-    return (
-      <p role="alert" className="text-[13px] text-red-600">
-        {state.message}
-      </p>
-    );
-  if (state.status === "ok")
-    return (
-      <p role="status" className="text-[13px] text-emerald-700">
-        {state.message}
-      </p>
-    );
-  return null;
-}
 
 export function TallerAcciones({ taller, reservas }: { taller: Taller; reservas: number | null }) {
   const [estadoState, estadoAction, estadoPending] = useActionState(cambiarEstado, inicial);
