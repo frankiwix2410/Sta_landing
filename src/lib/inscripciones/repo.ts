@@ -14,6 +14,7 @@ import {
   type FilaPersona,
 } from "./mapeo";
 import type { ComprobanteAdmin, DatosPersona, EstadoComprobante, Inscrito, Persona } from "./tipos";
+import { errorSeguro } from "@/lib/log-error";
 
 /**
  * Único módulo que lee y escribe personas, inscripciones y comprobantes. Solo
@@ -89,7 +90,7 @@ export async function crearInscripcion(n: NuevaInscripcion): Promise<Resultado<I
     console.error("[inscripciones] no se pudo crear", {
       referencia: n.referencia,
       tallerId: n.tallerId,
-      error,
+      error: errorSeguro(error),
     });
     return fallo("error");
   }
@@ -118,7 +119,7 @@ export async function consultarInscripcion(
     p_documento: documento,
   });
   if (error) {
-    console.error("[inscripciones] no se pudo consultar", { tallerId, error });
+    console.error("[inscripciones] no se pudo consultar", { tallerId, error: errorSeguro(error) });
     return fallo("error");
   }
   return { ok: true, valor: primera<FilaConsulta>(data) };
@@ -133,7 +134,7 @@ export async function listarInscritos(tallerId: string): Promise<Inscrito[] | nu
     .eq("taller_id", tallerId)
     .order("creado_en");
   if (error) {
-    console.error("[inscripciones] no se pudo listar", { tallerId, error });
+    console.error("[inscripciones] no se pudo listar", { tallerId, error: errorSeguro(error) });
     return null;
   }
   return (data as unknown as FilaInscrito[]).map(filaAInscrito);
@@ -148,7 +149,7 @@ export async function buscarPersona(documento: string): Promise<Resultado<Person
     .eq("documento", documento)
     .maybeSingle<FilaPersona>();
   if (error) {
-    console.error("[inscripciones] no se pudo buscar la persona", { error });
+    console.error("[inscripciones] no se pudo buscar la persona", { error: errorSeguro(error) });
     return fallo("error");
   }
   return { ok: true, valor: data ? filaAPersona(data) : null };
@@ -171,7 +172,7 @@ export async function actualizarPersona(id: string, d: DatosPersona): Promise<Re
     .eq("id", id)
     .select("id");
   if (error) {
-    if (error.code !== "23505") console.error("[inscripciones] no se pudo editar la persona", { id, error });
+    if (error.code !== "23505") console.error("[inscripciones] no se pudo editar la persona", { id, error: errorSeguro(error) });
     return fallo(motivoDesdeErrorPg(error));
   }
   return data.length > 0 ? { ok: true, valor: null } : fallo("no_encontrado");
@@ -182,7 +183,7 @@ export async function marcarAsistencia(tallerId: string, ids: string[], asistio:
   if (!supabase) return fallo("sin_conexion");
   const { data, error } = await supabase.from("inscripciones").update({ asistio }).eq("taller_id", tallerId).in("id", ids).select("id");
   if (error) {
-    console.error("[inscripciones] no se pudo marcar asistencia", { tallerId, cantidad: ids.length, error });
+    console.error("[inscripciones] no se pudo marcar asistencia", { tallerId, cantidad: ids.length, error: errorSeguro(error) });
     return fallo(motivoDesdeErrorPg(error));
   }
   return { ok: true, valor: data.length };
@@ -193,7 +194,7 @@ export async function cambiarCancelada(id: string, cancelada: boolean): Promise<
   if (!supabase) return fallo("sin_conexion");
   const { data, error } = await supabase.from("inscripciones").update({ cancelada }).eq("id", id).select("id");
   if (error) {
-    console.error("[inscripciones] no se pudo cancelar/reactivar", { id, error });
+    console.error("[inscripciones] no se pudo cancelar/reactivar", { id, error: errorSeguro(error) });
     return fallo(motivoDesdeErrorPg(error));
   }
   return data.length > 0 ? { ok: true, valor: null } : fallo("no_encontrado");
@@ -210,7 +211,7 @@ export async function ajustarPorcentaje(id: string, porcentaje: number | null): 
   });
   const fila = primera<FilaPorcentaje>(data);
   if (error || !fila) {
-    console.error("[inscripciones] no se pudo ajustar el porcentaje", { id, error });
+    console.error("[inscripciones] no se pudo ajustar el porcentaje", { id, error: errorSeguro(error) });
     return fallo("error");
   }
   return fila.ok && fila.nuevo_porcentaje !== null
@@ -226,7 +227,7 @@ export async function eliminarInscripcion(id: string): Promise<Resultado<null>> 
   const { data, error } = await supabase.rpc("eliminar_inscripcion", { p_inscripcion_id: id });
   const fila = primera<FilaEliminar>(data);
   if (error || !fila) {
-    console.error("[inscripciones] no se pudo eliminar", { id, error });
+    console.error("[inscripciones] no se pudo eliminar", { id, error: errorSeguro(error) });
     return fallo("error");
   }
   if (!fila.ok) return fallo(motivoDesdeReason(fila.reason));
@@ -235,7 +236,7 @@ export async function eliminarInscripcion(id: string): Promise<Resultado<null>> 
   // nada lo enlaza. Se registra para limpiarlo a mano.
   if (fila.archivos?.length) {
     const borrado = await supabase.storage.from(PROOF_BUCKET).remove(fila.archivos);
-    if (borrado.error) console.error("[inscripciones] archivos sin borrar", { archivos: fila.archivos, error: borrado.error });
+    if (borrado.error) console.error("[inscripciones] archivos sin borrar", { archivos: fila.archivos, error: errorSeguro(borrado.error) });
   }
   return { ok: true, valor: null };
 }
@@ -248,7 +249,7 @@ export async function fusionarPersonas(origen: string, destino: string): Promise
   const { data, error } = await supabase.rpc("fusionar_personas", { p_origen: origen, p_destino: destino });
   const fila = primera<FilaOk>(data);
   if (error || !fila) {
-    console.error("[inscripciones] no se pudo fusionar", { origen, destino, error });
+    console.error("[inscripciones] no se pudo fusionar", { origen, destino, error: errorSeguro(error) });
     return fallo("error");
   }
   return fila.ok ? { ok: true, valor: null } : fallo(motivoDesdeReason(fila.reason));
@@ -265,7 +266,7 @@ export async function listarComprobantes(f: {
   if (f.tallerId) consulta = consulta.eq("taller_id", f.tallerId);
   const { data, error } = await consulta.order("creado_en", { ascending: false }).limit(200);
   if (error) {
-    console.error("[inscripciones] no se pudieron listar los comprobantes", { f, error });
+    console.error("[inscripciones] no se pudieron listar los comprobantes", { f, error: errorSeguro(error) });
     return null;
   }
   return (data as unknown as FilaComprobante[]).map(filaAComprobante);
@@ -285,7 +286,7 @@ export async function revisarComprobante(
   });
   const fila = primera<FilaPorcentaje>(data);
   if (error || !fila) {
-    console.error("[inscripciones] no se pudo revisar el comprobante", { id, error });
+    console.error("[inscripciones] no se pudo revisar el comprobante", { id, error: errorSeguro(error) });
     return fallo("error");
   }
   return fila.ok && fila.nuevo_porcentaje !== null
@@ -306,12 +307,12 @@ export async function urlFirmadaComprobante(id: string): Promise<string | null> 
     .eq("id", id)
     .maybeSingle<{ file_path: string }>();
   if (error || !data) {
-    if (error) console.error("[inscripciones] no se pudo leer el comprobante", { id, error });
+    if (error) console.error("[inscripciones] no se pudo leer el comprobante", { id, error: errorSeguro(error) });
     return null;
   }
   const firmada = await supabase.storage.from(PROOF_BUCKET).createSignedUrl(data.file_path, 120);
   if (firmada.error) {
-    console.error("[inscripciones] no se pudo firmar la URL", { id, error: firmada.error });
+    console.error("[inscripciones] no se pudo firmar la URL", { id, error: errorSeguro(firmada.error) });
     return null;
   }
   return firmada.data.signedUrl;
@@ -341,9 +342,9 @@ export async function resumenInicio(tallerId: string | null): Promise<ResumenIni
   ]);
   if (comprobantes.error || personas.error || incompletos?.error) {
     console.error("[inscripciones] no se pudo armar el resumen", {
-      comprobantes: comprobantes.error,
-      personas: personas.error,
-      incompletos: incompletos?.error,
+      comprobantes: errorSeguro(comprobantes.error),
+      personas: errorSeguro(personas.error),
+      incompletos: errorSeguro(incompletos?.error),
     });
     return null;
   }

@@ -69,7 +69,7 @@ export const MENSAJES_INSCRIPCION: Record<MotivoInscripcion, string> = {
   no_encontrado: "No encontramos ese registro. Puede que se haya eliminado.",
   tiene_pagos_verificados: "Tiene pagos verificados: no se puede eliminar. Cancélala en su lugar.",
   tiene_certificado:
-    "Tiene un certificado emitido: no se puede eliminar ni fusionar. Revoca el certificado o cancela la inscripción.",
+    "Esta inscripción tiene un certificado y no se puede eliminar. Para unir dos fichas, elige como destino la que tiene el certificado.",
   misma_persona: "Elige una persona distinta para fusionar.",
   estado_invalido: "Estado de comprobante no válido. Recarga la página e inténtalo de nuevo.",
   origen_invalido: "Origen de la inscripción no válido.",

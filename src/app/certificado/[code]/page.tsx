@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { Aviso } from "@/components/certificado/aviso";
 import { PrintButton } from "@/components/certificado/print-button";
 import { CertificateSheet } from "@/components/certificado/sheet";
 import { esReferencia, normalizarCodigo } from "@/lib/certificados/codigo";
 import { codigoPorReferencia, obtenerCertificado } from "@/lib/certificados/repo";
+import { crearLimitador, ipDeCabeceras } from "@/lib/limite";
 
 // Se comprueba contra la base en cada visita: si se revoca, el enlace deja de
 // acreditar nada de inmediato.
@@ -24,6 +26,18 @@ function SinConexion() {
         Hubo un problema al consultar los certificados. Vuelve a intentarlo en unos minutos y, si
         sigue igual, escríbenos y lo resolvemos.
       </p>
+    </Aviso>
+  );
+}
+
+// Los enlaces antiguos por referencia (STA-XXXXXXXX) se resuelven contra la base:
+// sin freno, servirían para probar referencias una tras otra.
+const limitadorReferencias = crearLimitador({ max: 30, ventanaMs: 10 * 60 * 1000 });
+
+function Limitado() {
+  return (
+    <Aviso titulo="Certificado no disponible">
+      <p>Demasiadas consultas, inténtalo en unos minutos.</p>
     </Aviso>
   );
 }
@@ -54,6 +68,7 @@ export default async function CertificadoPage({ params }: { params: Promise<{ co
 
   // Enlaces antiguos por referencia de la reserva: llevan al código si existe.
   if (esReferencia(texto)) {
+    if (!limitadorReferencias.permitir(ipDeCabeceras(await headers()))) return <Limitado />;
     const codigo = await codigoPorReferencia(texto.toUpperCase());
     if (codigo === "unavailable") return <SinConexion />;
     if (codigo) redirect(`/certificado/${codigo}`);

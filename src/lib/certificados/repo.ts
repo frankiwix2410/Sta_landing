@@ -2,6 +2,7 @@ import { motivoDesdeReason, type MotivoInscripcion } from "@/lib/inscripciones/e
 import { getSupabase } from "@/lib/reservations/supabase";
 import { COLUMNAS_CERTIFICADO, filaACertificado, type FilaCertificado } from "./mapeo";
 import type { Certificado, CertificadoPublico } from "./tipos";
+import { errorSeguro } from "@/lib/log-error";
 
 /**
  * Único módulo que lee los certificados. Solo servidor. La emisión y la
@@ -24,7 +25,7 @@ export async function obtenerCertificado(codigo: string): Promise<BusquedaCertif
     .eq("codigo", codigo)
     .maybeSingle<FilaCertificado>();
   if (error) {
-    console.error("[certificados] no se pudo leer", { error });
+    console.error("[certificados] no se pudo leer", { error: errorSeguro(error) });
     return { kind: "unavailable" };
   }
   return data ? { kind: "found", certificado: filaACertificado(data) } : { kind: "not_found" };
@@ -40,7 +41,7 @@ export async function codigoPorReferencia(referencia: string): Promise<string | 
     .eq("referencia", referencia)
     .maybeSingle<{ codigo: string }>();
   if (error) {
-    console.error("[certificados] no se pudo buscar por referencia", { error });
+    console.error("[certificados] no se pudo buscar por referencia", { error: errorSeguro(error) });
     return "unavailable";
   }
   return data?.codigo ?? null;
@@ -56,7 +57,7 @@ export async function listarCertificadosTaller(tallerId: string): Promise<Certif
     .eq("taller_id", tallerId)
     .order("nombre");
   if (error) {
-    console.error("[certificados] no se pudieron listar", { error });
+    console.error("[certificados] no se pudieron listar", { error: errorSeguro(error) });
     return null;
   }
   return (data as unknown as FilaCertificado[]).map(filaACertificado);
@@ -72,7 +73,7 @@ export async function certificadosPorDocumento(documento: string): Promise<Certi
     .eq("documento", documento)
     .order("emitido_en", { ascending: false });
   if (error) {
-    console.error("[certificados] no se pudo buscar por documento", { error });
+    console.error("[certificados] no se pudo buscar por documento", { error: errorSeguro(error) });
     return null;
   }
   return (data as { codigo: string; curso: string; fechas_texto: string }[]).map((f) => ({
@@ -96,7 +97,7 @@ export async function revocarCertificado(
   });
   const fila = (data as FilaRevocar[] | null)?.[0] ?? null;
   if (error || !fila) {
-    console.error("[certificados] no se pudo revocar/reactivar", { error });
+    console.error("[certificados] no se pudo revocar/reactivar", { error: errorSeguro(error) });
     return { ok: false, motivo: "error" };
   }
   return fila.ok ? { ok: true, vigente: fila.vigente } : { ok: false, motivo: motivoDesdeReason(fila.reason) };

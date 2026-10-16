@@ -3,6 +3,7 @@ import { getSupabase } from "@/lib/reservations/supabase";
 import { motivoDesdeReason } from "./errores";
 import type { Correcciones } from "./formulario";
 import type { Resultado } from "./repo";
+import { errorSeguro } from "@/lib/log-error";
 
 export type NuevoComprobante = {
   tallerId: string;
@@ -52,7 +53,7 @@ export async function guardarComprobante(
     upsert: false,
   });
   if (subida.error) {
-    console.error("[taller] no se pudo subir el comprobante", { ruta, error: subida.error });
+    console.error("[taller] no se pudo subir el comprobante", { ruta, error: errorSeguro(subida.error) });
     return { ok: false, motivo: "error" };
   }
 
@@ -85,7 +86,7 @@ export async function guardarComprobante(
 
   await bucket.remove([ruta]);
   if (error || !fila) {
-    console.error("[taller] no se pudo registrar el comprobante", { ruta, error });
+    console.error("[taller] no se pudo registrar el comprobante", { ruta, error: errorSeguro(error) });
     return { ok: false, motivo: "error" };
   }
   return { ok: false, motivo: motivoDesdeReason(fila.reason) };
