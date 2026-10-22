@@ -185,44 +185,78 @@ export function Instructor() {
 }
 
 /* ------------------------------------------------------------ TÉRMINOS */
+/** Fondo y texto de cada tramo de reembolso: más intenso cuanto más se devuelve. */
+function tonoReembolso(percent: number) {
+  if (percent >= 100) return { card: "bg-navy text-white", soft: "text-ice/70", bar: "bg-sky" };
+  if (percent > 0) return { card: "bg-azure text-white", soft: "text-white/75", bar: "bg-white/70" };
+  return { card: "bg-cream text-navy", soft: "text-ink-soft", bar: "bg-navy/15" };
+}
+
 export function Terminos() {
   const taller = useTaller();
-  if (taller.terms.length === 0) return null;
   return (
     <section id="terminos" className="bg-white px-5 py-24 sm:px-8 lg:px-16 lg:py-32">
-      <div className="mx-auto grid max-w-[1120px] grid-cols-1 gap-12 lg:grid-cols-[.8fr_1.2fr] lg:gap-16">
-        <div>
-          <Reveal className="eyebrow mb-4 text-azure">
-            <span className="block h-px w-6 bg-azure" />
-            Términos y condiciones
-          </Reveal>
+      <div className="mx-auto max-w-[1120px]">
+        <Reveal className="eyebrow mb-4 text-azure">
+          <span className="block h-px w-6 bg-azure" />
+          Términos y condiciones
+        </Reveal>
+
+        <div className="flex flex-wrap items-end justify-between gap-6">
           <WordsReveal
-            lines={["Reglas", "claras."]}
+            lines={["Si cancelas,"]}
+            accent="esto se devuelve."
+            accentClassName="text-azure"
             className="text-[clamp(30px,4vw,48px)] leading-[1.1] text-navy"
           />
-          <Reveal delay={0.12}>
-            <p className="mt-6 max-w-[380px] text-[15px] leading-[1.8] text-ink">
-              Al reservar o registrar un pago aceptas estas condiciones. Aplican igual
-              para todos, sin excepciones.
+          <Reveal delay={0.1}>
+            <p className="max-w-[360px] text-[14.5px] leading-[1.8] text-ink">
+              Los plazos se cuentan hasta el inicio del taller. Al reservar o registrar un
+              pago aceptas estas condiciones, iguales para todos.
             </p>
           </Reveal>
         </div>
 
-        <ol className="flex flex-col">
-          {taller.terms.map((t, i) => (
-            <li key={t.title} className="border-b border-navy/10 py-5">
-              <Reveal delay={i * 0.05} className="flex gap-5">
-                <span className="w-7 flex-none font-mono text-[13px] leading-[1.9] text-azure">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <div>
-                  <p className="text-[16px] font-medium text-navy">{t.title}</p>
-                  <p className="mt-1.5 max-w-[560px] text-[14px] leading-[1.8] text-ink">{t.text}</p>
+        <ol className="mt-12 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+          {taller.refunds.map((r, i) => {
+            const tono = tonoReembolso(r.percent);
+            return (
+              <Reveal as="li" key={r.when} delay={i * 0.08}>
+                <div className={`flex h-full flex-col rounded-3xl p-6 sm:p-7 ${tono.card}`}>
+                  <p className={`text-[12px] font-semibold tracking-[0.08em] uppercase ${tono.soft}`}>
+                    {r.when}
+                  </p>
+                  <p className="mt-6 font-serif text-[clamp(52px,6vw,72px)] leading-none">
+                    {r.percent}%
+                  </p>
+                  <div className="mt-5 h-1.5 w-full overflow-hidden rounded-full bg-current/10">
+                    <div
+                      className={`h-full rounded-full ${tono.bar}`}
+                      style={{ width: `${r.percent}%` }}
+                    />
+                  </div>
+                  <p className={`mt-5 text-[14px] leading-[1.7] ${tono.soft}`}>{r.text}</p>
                 </div>
               </Reveal>
-            </li>
-          ))}
+            );
+          })}
         </ol>
+
+        {taller.terms.length > 0 && (
+          <ul className="mt-14 grid grid-cols-1 gap-x-12 sm:grid-cols-2">
+            {taller.terms.map((t, i) => (
+              <Reveal as="li" key={t.title} delay={i * 0.05}>
+                <div className="flex h-full gap-4 border-t border-navy/10 py-6">
+                  <span className="mt-[9px] block size-1.5 flex-none rounded-full bg-azure" />
+                  <div>
+                    <p className="text-[16px] font-medium text-navy">{t.title}</p>
+                    <p className="mt-1.5 text-[14px] leading-[1.8] text-ink">{t.text}</p>
+                  </div>
+                </div>
+              </Reveal>
+            ))}
+          </ul>
+        )}
       </div>
     </section>
   );

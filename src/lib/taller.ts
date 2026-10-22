@@ -111,26 +111,37 @@ const contenido = {
   },
 
   /**
-   * Términos y condiciones del taller. Se muestran en su propia sección de la
-   * página y hay que aceptarlos para reservar y para registrar un pago. Los
-   * plazos se cuentan hasta el inicio del taller.
+   * Reembolso según la anticipación con la que se cancela, contada hasta el
+   * inicio del taller. Va de más a menos anticipación; `percent` es lo que se
+   * devuelve y pinta la intensidad de cada tramo.
+   */
+  refunds: [
+    {
+      when: "30 días o más antes",
+      percent: 100,
+      text: "Avisa por WhatsApp y se te devuelve todo lo pagado.",
+    },
+    {
+      when: "Entre 29 y 20 días antes",
+      percent: 50,
+      text: "Se reembolsa el 50% del costo del taller.",
+    },
+    {
+      when: "Menos de 20 días antes",
+      percent: 0,
+      text: "No hay reembolso.",
+    },
+  ],
+
+  /**
+   * Términos y condiciones del taller, aparte de los reembolsos. Se muestran
+   * en su propia sección de la página y hay que aceptarlos para reservar y
+   * para registrar un pago.
    */
   terms: [
     {
       title: "Certificado solo con asistencia",
       text: "El certificado se entrega únicamente a quien asiste al taller y tiene el pago completo. Si no asistes, no hay certificado, aunque hayas pagado el 50% o el 100%.",
-    },
-    {
-      title: "Cancelación con 7 días o más de anticipación",
-      text: "Puedes cancelar tu cupo avisando por WhatsApp con al menos 7 días de anticipación al inicio del taller. Así el cupo pasa a la lista de espera y se te reembolsa lo pagado.",
-    },
-    {
-      title: "Cancelación entre 7 días y 72 horas antes",
-      text: "Solo se reembolsa si el cupo se vende a alguien de la lista de espera. Si no se vende, no hay reembolso.",
-    },
-    {
-      title: "Cancelación con menos de 72 horas",
-      text: "Si cancelas con menos de 72 horas (3 días) de anticipación al inicio del taller, no hay reembolso.",
     },
     {
       title: "Inasistencia",
@@ -169,7 +180,7 @@ const contenido = {
     },
     {
       q: "¿Me devuelven el dinero si no puedo asistir?",
-      a: "Solo si cancelas con al menos 7 días de anticipación. Con menos de 72 horas, o si no asistes, no hay reembolso ni certificado. El detalle completo está en «Términos y condiciones», más abajo en esta página.",
+      a: "Depende de la anticipación: con 30 días o más se devuelve el 100%; entre 29 y 20 días, el 50% del costo del taller. Con menos de 20 días, o si no asistes, no hay reembolso ni certificado. El detalle completo está en «Términos y condiciones», más abajo en esta página.",
     },
   ],
 } as const;

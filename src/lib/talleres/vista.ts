@@ -34,6 +34,7 @@ export type TallerVista = {
   highlights: readonly string[];
   faq: readonly ContenidoTaller["faq"][number][];
   terms: readonly ContenidoTaller["terms"][number][];
+  refunds: ContenidoTaller["refunds"];
   gallery: readonly ContenidoTaller["gallery"][number][];
   contact: ContenidoTaller["contact"];
   payment: ContenidoTaller["payment"];
@@ -103,6 +104,7 @@ export function construirTallerVista(
     highlights: lista("highlights", base.highlights),
     faq: lista("faq", base.faq),
     terms: lista("terms", base.terms),
+    refunds: base.refunds,
     gallery: lista("gallery", base.gallery),
     contact: base.contact,
     payment: base.payment,

@@ -331,7 +331,7 @@ export function ReservaForm() {
           <a href="#terminos" className="font-semibold text-azure underline-offset-4 hover:underline">
             términos y condiciones
           </a>
-          : sin asistencia no hay certificado ni reembolso, y con menos de 72 horas de
+          : sin asistencia no hay certificado ni reembolso, y con menos de 20 días de
           anticipación no hay reembolso.
         </span>
       </label>
