@@ -110,6 +110,42 @@ const contenido = {
       "Si no pagas a tiempo el 50% restante, no hay reembolso del abono: ese primer 50% cubre los gastos operativos del taller.",
   },
 
+  /**
+   * Términos y condiciones del taller. Se muestran en su propia sección de la
+   * página y hay que aceptarlos para reservar y para registrar un pago. Los
+   * plazos se cuentan hasta el inicio del taller.
+   */
+  terms: [
+    {
+      title: "Certificado solo con asistencia",
+      text: "El certificado se entrega únicamente a quien asiste al taller y tiene el pago completo. Si no asistes, no hay certificado, aunque hayas pagado el 50% o el 100%.",
+    },
+    {
+      title: "Cancelación con 7 días o más de anticipación",
+      text: "Puedes cancelar tu cupo avisando por WhatsApp con al menos 7 días de anticipación al inicio del taller. Así el cupo pasa a la lista de espera y se te reembolsa lo pagado.",
+    },
+    {
+      title: "Cancelación entre 7 días y 72 horas antes",
+      text: "Solo se reembolsa si el cupo se vende a alguien de la lista de espera. Si no se vende, no hay reembolso.",
+    },
+    {
+      title: "Cancelación con menos de 72 horas",
+      text: "Si cancelas con menos de 72 horas (3 días) de anticipación al inicio del taller, no hay reembolso.",
+    },
+    {
+      title: "Inasistencia",
+      text: "Si no asistes al taller, no hay reembolso ni certificado.",
+    },
+    {
+      title: "Abono del 50%",
+      text: "Si no pagas a tiempo el 50% restante, pierdes el cupo y no hay reembolso del abono.",
+    },
+    {
+      title: "Por qué",
+      text: "Lo pagado cubre los costos operativos del taller: sede, equipos de ultrasonido, phantoms, insumos y personal. Esos costos se asumen desde que reservas tu cupo.",
+    },
+  ],
+
   faq: [
     {
       q: "¿A quién está dirigido el taller?",
@@ -132,8 +168,8 @@ const contenido = {
       a: "Al enviar el formulario con tu número de documento generamos tu reserva y te contactamos por WhatsApp para cerrar el pago. Cuando pagues, entra en «Registrar pago», escribe el mismo documento y sube el comprobante. El cupo queda confirmado cuando verificamos el pago.",
     },
     {
-      q: "¿Me devuelven el abono si no completo el pago?",
-      a: "No. Si no pagas a tiempo el 50% restante, no hay reembolso del abono, porque ese 50% cubre los gastos operativos del taller.",
+      q: "¿Me devuelven el dinero si no puedo asistir?",
+      a: "Solo si cancelas con al menos 7 días de anticipación. Con menos de 72 horas, o si no asistes, no hay reembolso ni certificado. El detalle completo está en «Términos y condiciones», más abajo en esta página.",
     },
   ],
 } as const;

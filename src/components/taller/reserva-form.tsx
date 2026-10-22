@@ -324,6 +324,19 @@ export function ReservaForm() {
       </label>
       {errors.consent && <p className="-mt-2 text-[12px] text-red-600">{errors.consent}</p>}
 
+      <label className="flex cursor-pointer items-start gap-3 text-[12.5px] leading-relaxed text-ink">
+        <input type="checkbox" name="terms" className="mt-0.5 accent-azure" />
+        <span>
+          Acepto los{" "}
+          <a href="#terminos" className="font-semibold text-azure underline-offset-4 hover:underline">
+            términos y condiciones
+          </a>
+          : sin asistencia no hay certificado ni reembolso, y con menos de 72 horas de
+          anticipación no hay reembolso.
+        </span>
+      </label>
+      {errors.terms && <p className="-mt-2 text-[12px] text-red-600">{errors.terms}</p>}
+
       {state.status === "error" && state.message && (
         <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-[13px] text-red-700">
           {state.message}

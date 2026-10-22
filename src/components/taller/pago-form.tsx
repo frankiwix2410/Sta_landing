@@ -414,6 +414,21 @@ function PasoPago({
         {errors.consent && <p className={errorClass}>{errors.consent}</p>}
       </div>
 
+      <div>
+        <label className="flex cursor-pointer items-start gap-3 text-[12.5px] leading-relaxed text-ink">
+          <input type="checkbox" name="terms" className="mt-0.5 accent-azure" />
+          <span>
+            Acepto los{" "}
+            <a href="#terminos" className="font-semibold text-azure underline-offset-4 hover:underline">
+              términos y condiciones
+            </a>
+            : sin asistencia no hay certificado ni reembolso, y con menos de 72 horas de
+            anticipación no hay reembolso.
+          </span>
+        </label>
+        {errors.terms && <p className={errorClass}>{errors.terms}</p>}
+      </div>
+
       {state.status === "error" && state.message && (
         <div role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-[13px] text-red-700">
           {state.message}

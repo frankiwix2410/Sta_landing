@@ -104,6 +104,8 @@ export async function createReservation(
   const errors: Record<string, string> = lectura.ok ? {} : { ...lectura.errores };
   if (formData.get("consent") !== "on")
     errors.consent = "Necesitamos tu autorización para contactarte.";
+  if (formData.get("terms") !== "on")
+    errors.terms = "Debes aceptar los términos y condiciones para reservar.";
   if (!lectura.ok || Object.keys(errors).length > 0) return { status: "error", errors };
   const { datos, notas } = lectura;
 
@@ -296,6 +298,8 @@ export async function registrarPago(
 
   if (formData.get("consent") !== "on")
     errors.consent = "Necesitamos tu autorización para verificar el pago.";
+  if (formData.get("terms") !== "on")
+    errors.terms = "Debes aceptar los términos y condiciones para registrar el pago.";
 
   const upload = formData.get("proof");
   let file: ProofFile | null = null;

@@ -65,6 +65,12 @@ export function TallerFooter({ taller }: { taller: TallerVista }) {
                   Descargar certificado
                 </a>
               )}
+              <a
+                href="#terminos"
+                className="text-[13.5px] text-white/80 transition-colors hover:text-white"
+              >
+                Términos y condiciones
+              </a>
               <Link
                 href="/"
                 className="text-[13.5px] text-white/80 transition-colors hover:text-white"

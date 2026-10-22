@@ -7,7 +7,7 @@ import { TallerNav } from "@/components/taller/nav";
 import { PagoSection } from "@/components/taller/pago-form";
 import { ProximaEdicion } from "@/components/taller/proxima-edicion";
 import { ReservaSection } from "@/components/taller/reserva-form";
-import { Contenido, Faq, Galeria, Instructor } from "@/components/taller/sections";
+import { Contenido, Faq, Galeria, Instructor, Terminos } from "@/components/taller/sections";
 import { supabaseConfigured } from "@/lib/reservations/supabase";
 import { TallerProvider } from "@/lib/talleres/contexto";
 import { cargarTallerPublico } from "@/lib/talleres/publico";
@@ -104,6 +104,7 @@ export default async function TallerPage() {
         {t.mostrar.pago && <PagoSection />}
         {t.mostrar.certificados && t.estado !== "finalizado" && <CertificadosSection destacada={false} />}
         <Faq />
+        <Terminos />
       </main>
       <TallerFooter taller={t} />
     </TallerProvider>

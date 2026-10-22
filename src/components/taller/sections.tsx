@@ -184,6 +184,50 @@ export function Instructor() {
   );
 }
 
+/* ------------------------------------------------------------ TÉRMINOS */
+export function Terminos() {
+  const taller = useTaller();
+  if (taller.terms.length === 0) return null;
+  return (
+    <section id="terminos" className="bg-white px-5 py-24 sm:px-8 lg:px-16 lg:py-32">
+      <div className="mx-auto grid max-w-[1120px] grid-cols-1 gap-12 lg:grid-cols-[.8fr_1.2fr] lg:gap-16">
+        <div>
+          <Reveal className="eyebrow mb-4 text-azure">
+            <span className="block h-px w-6 bg-azure" />
+            Términos y condiciones
+          </Reveal>
+          <WordsReveal
+            lines={["Reglas", "claras."]}
+            className="text-[clamp(30px,4vw,48px)] leading-[1.1] text-navy"
+          />
+          <Reveal delay={0.12}>
+            <p className="mt-6 max-w-[380px] text-[15px] leading-[1.8] text-ink">
+              Al reservar o registrar un pago aceptas estas condiciones. Aplican igual
+              para todos, sin excepciones.
+            </p>
+          </Reveal>
+        </div>
+
+        <ol className="flex flex-col">
+          {taller.terms.map((t, i) => (
+            <li key={t.title} className="border-b border-navy/10 py-5">
+              <Reveal delay={i * 0.05} className="flex gap-5">
+                <span className="w-7 flex-none font-mono text-[13px] leading-[1.9] text-azure">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <div>
+                  <p className="text-[16px] font-medium text-navy">{t.title}</p>
+                  <p className="mt-1.5 max-w-[560px] text-[14px] leading-[1.8] text-ink">{t.text}</p>
+                </div>
+              </Reveal>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+  );
+}
+
 /* -------------------------------------------------------------------- FAQ */
 export function Faq() {
   const taller = useTaller();
