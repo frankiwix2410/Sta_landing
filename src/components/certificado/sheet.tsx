@@ -220,10 +220,13 @@ function splitCourse(title: string) {
   };
 }
 
-/** Web pública del sitio, la que abre el QR. Sin ella se imprime el Instagram. */
+/**
+ * Web pública del sitio, la que abre el QR. La variable de entorno solo sirve
+ * para probar en local con otro dominio; en producción manda `site.url`.
+ */
 function siteUrl() {
-  const raw = process.env.NEXT_PUBLIC_SITE_URL;
-  return raw ? raw.replace(/\/$/, "") : null;
+  const raw = process.env.NEXT_PUBLIC_SITE_URL || site.url;
+  return raw.replace(/\/$/, "");
 }
 
 function qrSvg(url: string) {
