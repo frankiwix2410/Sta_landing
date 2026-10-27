@@ -232,6 +232,29 @@ begin
     raise exception 'FALLO 17: permisos';
   end if;
   raise notice 'OK permisos';
+
+  -- 18. Fecha de emisión = día siguiente al fin del taller (hora de Caracas),
+  --     también tras mover la fecha de fin.
+  if exists (
+    select 1 from public.certificados c
+      join public.inscripciones i on i.id = c.inscripcion_id
+      join public.talleres t on t.id = i.taller_id
+     where (c.emitido_en at time zone 'America/Caracas')::date <> t.fecha_fin + 1
+  ) then
+    raise exception 'FALLO 18a: fecha de emisión distinta del día siguiente al fin';
+  end if;
+  update public.talleres t set fecha_fin = t.fecha_fin + 1
+   where t.id = (select i.taller_id from public.inscripciones i
+                   join public.certificados c on c.inscripcion_id = i.id limit 1);
+  if exists (
+    select 1 from public.certificados c
+      join public.inscripciones i on i.id = c.inscripcion_id
+      join public.talleres t on t.id = i.taller_id
+     where (c.emitido_en at time zone 'America/Caracas')::date <> t.fecha_fin + 1
+  ) then
+    raise exception 'FALLO 18b: la fecha de emisión no siguió a la nueva fecha de fin';
+  end if;
+  raise notice 'OK fecha de emisión = día siguiente al fin del taller';
 end
 $$;
 
