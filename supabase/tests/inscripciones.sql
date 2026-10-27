@@ -239,8 +239,11 @@ begin
   --     los mismos casos de su prueba y otros con tildes.
   if public.normalizar_documento(' 1.136.882.468 ') is distinct from '1136882468'
      or public.normalizar_documento('1.136.882.468') is distinct from '1136882468'
-     or public.normalizar_documento('v-20.111.222') is distinct from 'V20111222'
-     or public.normalizar_documento('V-20.111.222') is distinct from 'V20111222'
+     or public.normalizar_documento('v-20.111.222') is distinct from '20111222'
+     or public.normalizar_documento('V-20.111.222') is distinct from '20111222'
+     or public.normalizar_documento('E-81.234.567') is distinct from '81234567'
+     or public.normalizar_documento('VE123456') is distinct from 'VE123456'
+     or public.normalizar_documento('V1234') is distinct from 'V1234'
      or public.normalizar_documento(' cc 12 34 ') is distinct from 'CC1234'
      or public.normalizar_documento('AB 12-34') is distinct from 'AB1234'
      or public.normalizar_documento('ñá-123') is distinct from 'NA123'

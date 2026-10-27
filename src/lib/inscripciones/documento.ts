@@ -10,11 +10,16 @@ const DIACRITICOS = /[̀-ͯ]/g;
  * la base busca y compara con esa función.
  */
 export function normalizarDocumento(texto: string): string {
-  return texto
-    .normalize("NFD")
-    .replace(DIACRITICOS, "")
-    .toUpperCase()
-    .replace(/[^A-Z0-9]/g, "");
+  return (
+    texto
+      .normalize("NFD")
+      .replace(DIACRITICOS, "")
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, "")
+      // La V o la E de las cédulas venezolanas no identifica a nadie: con o sin
+      // ella es la misma persona, y así se encuentra escriba como escriba.
+      .replace(/^[VE](?=\d{5,}$)/, "")
+  );
 }
 
 /**

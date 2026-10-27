@@ -11,8 +11,20 @@ import {
 describe("normalizarDocumento", () => {
   it("quita puntos, espacios y guiones y pasa a mayúsculas", () => {
     expect(normalizarDocumento(" 1.136.882.468 ")).toBe("1136882468");
-    expect(normalizarDocumento("v-20.111.222")).toBe("V20111222");
     expect(normalizarDocumento("AB 12-34")).toBe("AB1234");
+  });
+
+  it("la V o la E de las cédulas venezolanas no cuenta: con o sin ella es la misma persona", () => {
+    expect(normalizarDocumento("V-20.111.222")).toBe("20111222");
+    expect(normalizarDocumento("v-20.111.222")).toBe("20111222");
+    expect(normalizarDocumento("E-81.234.567")).toBe("81234567");
+    expect(normalizarDocumento("20.111.222")).toBe("20111222");
+  });
+
+  it("documentos con letras que no son una cédula con V/E quedan igual", () => {
+    expect(normalizarDocumento("VE123456")).toBe("VE123456");
+    expect(normalizarDocumento("V1234")).toBe("V1234");
+    expect(normalizarDocumento("AB123456")).toBe("AB123456");
   });
 
   it("quita tildes igual que public.normalizar_documento", () => {

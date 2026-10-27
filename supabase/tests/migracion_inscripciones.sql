@@ -52,7 +52,8 @@ begin
   select p.documento into v_doc
     from public.inscripciones i join public.personas p on p.id = i.persona_id
    where i.id = '10000000-0000-0000-0000-000000000003';
-  if v_doc is distinct from 'V20111222' then raise exception 'FALLO: documento normalizado = %', v_doc; end if;
+  -- Tras 20261027_01 la V de la cédula ya no se guarda.
+  if v_doc is distinct from '20111222' then raise exception 'FALLO: documento normalizado = %', v_doc; end if;
   select p.documento, i.notas into v_doc, v_notas
     from public.inscripciones i join public.personas p on p.id = i.persona_id
    where i.id = '10000000-0000-0000-0000-000000000004';

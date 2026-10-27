@@ -47,7 +47,7 @@ describe("leerPersonaForm", () => {
       ok: true,
       notas: "",
       datos: {
-        documento: "V20111222",
+        documento: "20111222",
         tipoDocumento: "CI",
         nombre: "Ana Pérez",
         email: null,
