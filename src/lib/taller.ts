@@ -27,6 +27,8 @@ const contenido = {
       name: "MD. Stevan J. Camelo C.",
       title: "Anestesiólogo",
       document: "C.C. 1.136.882.468",
+      /** Firma manuscrita, PNG con fondo transparente (1093 × 428). */
+      image: "/assets/firma-stevan.png",
     },
     photo: "/assets/dr-oficina-sonrisa.webp",
     credentials: [

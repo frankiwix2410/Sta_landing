@@ -35,6 +35,9 @@ export async function CertificateSheet({ certificado }: { certificado: Certifica
     title: certificado.firmaCargo ?? fallback.title,
     document: certificado.firmaDocumento ?? fallback.document,
   };
+  // La firma manuscrita es la del instructor: solo se pone si firma él. Un
+  // taller con otro firmante sale con la línea en blanco.
+  const firmaManuscrita = signature.name === fallback.name ? fallback.image : null;
   const lugar = [certificado.ciudad, certificado.region].filter(Boolean).join(", ");
   const documento = numeroDocumento(certificado.tipoDocumento, certificado.documento);
 
@@ -54,7 +57,7 @@ export async function CertificateSheet({ certificado }: { certificado: Certifica
         style={{ opacity: 0.045 }}
       />
 
-      <div className="relative flex h-full flex-col items-center px-[30mm] pt-[11mm] pb-[15mm] text-center">
+      <div className="relative flex h-full flex-col items-center px-[30mm] pt-[11mm] pb-[9mm] text-center">
         {/* Cabecera: sello de Anesthesia Deorum Ars · monograma · QR de la web */}
         <header className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-x-[7mm]">
           <Image
@@ -189,8 +192,21 @@ export async function CertificateSheet({ certificado }: { certificado: Certifica
         ) : null}
 
         {/* Firma */}
-        <footer className="mt-auto w-[78mm] pt-[8mm] text-center">
-          <div className="h-[0.3mm] w-full bg-navy/50" />
+        <footer className="mt-auto w-[78mm] pt-[12mm] text-center">
+          <div className="relative">
+            {/* Como una firma real, el trazo baja un poco sobre la línea. */}
+            {firmaManuscrita && (
+              <Image
+                src={firmaManuscrita}
+                alt=""
+                aria-hidden
+                width={1093}
+                height={428}
+                className="pointer-events-none absolute bottom-[-1.5mm] left-1/2 h-[20mm] w-auto max-w-none -translate-x-1/2 select-none"
+              />
+            )}
+            <div className="h-[0.3mm] w-full bg-navy/50" />
+          </div>
           <p className="mt-[2.5mm] text-[3.4mm] font-bold tracking-[0.06em] text-navy uppercase">
             {signature.name}
           </p>
